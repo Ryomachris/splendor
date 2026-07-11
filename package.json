@@ -1,0 +1,16 @@
+{
+  "name": "splendor-duel",
+  "version": "1.0.0",
+  "description": "双人对战璀璨宝石(Splendor)网页游戏",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node scripts/smoke.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "ws": "^8.17.0"
+  }
+}
