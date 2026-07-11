@@ -1,7 +1,6 @@
 # 璀璨宝石 · 双人对决 (Splendor Duel)
 
-可部署在 Linux 服务器上的双人在线「璀璨宝石」网页游戏。
-Node.js + WebSocket 实现,服务端判定全部规则,浏览器直接打开即可玩,无需安装客户端。
+一款支持双人在线对战的「璀璨宝石」桌游复刻。基于 Node.js + WebSocket,服务端统一判定规则,双方打开浏览器即可对战,无需安装客户端或注册账号。
 
 ## 功能
 
@@ -12,33 +11,54 @@ Node.js + WebSocket 实现,服务端判定全部规则,浏览器直接打开即�
 - 断线自动重连(浏览器刷新 / 网络闪断都能恢复对局)
 - 局终可一键「再来一局」
 
-## 快速开始
+## 在 Linux 服务器上部署(外网可访问)
 
-需要 Node.js ≥ 16。
+### 1. 环境要求
 
-```bash
-cd splendor
-npm install
-node server.js          # 默认端口 3000,可用 PORT=8080 node server.js 修改
-```
+- Linux 服务器(需有公网 IP 或端口映射)
+- Node.js ≥ 16
 
-浏览器访问 `http://服务器IP:3000`,一人点「创建房间」,另一人输入房间码「加入房间」即可开战。
-
-记得放行防火墙端口,例如:
+### 2. 上传项目并安装依赖
 
 ```bash
-sudo ufw allow 3000/tcp        # Ubuntu/Debian
-# 或
-sudo firewall-cmd --add-port=3000/tcp --permanent && sudo firewall-cmd --reload   # CentOS/RHEL
+# 将整个 splendor 目录上传到服务器,例如 /opt/splendor
+scp -r splendor/ user@your-server:/opt/
+
+# SSH 登录服务器
+ssh user@your-server
+
+# 安装依赖
+cd /opt/splendor
+npm install --omit=dev
 ```
 
-## 运行测试
+### 3. 放行防火墙端口
 
 ```bash
-npm test    # 端到端冒烟测试:建房、拿宝石、预定、购买、弃子、重连等 23 项断言
+# Ubuntu / Debian
+sudo ufw allow 3000/tcp
+sudo ufw enable   # 如果 ufw 尚未启用
+
+# CentOS / RHEL
+sudo firewall-cmd --add-port=3000/tcp --permanent
+sudo firewall-cmd --reload
 ```
 
-## 用 systemd 常驻运行
+如果服务器在云厂商(阿里云/腾讯云/AWS 等)上,还需在**安全组/防火墙规则**中放行 TCP 3000 端口,否则外网无法访问。
+
+### 4. 启动服务
+
+**临时测试:**
+
+```bash
+node server.js
+# 默认监听 3000 端口,外网访问 http://你的公网IP:3000
+# 自定义端口: PORT=8080 node server.js
+```
+
+浏览器访问 `http://你的公网IP:3000`,一人点「创建房间」,另一人输入房间码「加入房间」即可对战。
+
+**生产环境(用 systemd 常驻后台,重启自动拉起):**
 
 创建 `/etc/systemd/system/splendor.service`:
 
@@ -54,26 +74,29 @@ ExecStart=/usr/bin/node server.js
 Environment=PORT=3000
 Restart=always
 RestartSec=3
-User=www-data
 
 [Install]
 WantedBy=multi-user.target
 ```
 
+然后启动:
+
 ```bash
-sudo cp -r splendor /opt/splendor && cd /opt/splendor && sudo npm install --omit=dev
 sudo systemctl daemon-reload
 sudo systemctl enable --now splendor
+sudo systemctl status splendor   # 确认运行正常
 ```
 
-## 可选:Nginx 反向代理(HTTPS / 80 端口)
+### 5. (可选)绑定域名 + HTTPS 反向代理
 
-WebSocket 需要升级头,配置示例:
+如果有域名,推荐用 Nginx 反代到本地端口,并配置 SSL 证书。
+
+**Nginx 配置示例** (`/etc/nginx/sites-available/splendor`):
 
 ```nginx
 server {
     listen 80;
-    server_name game.example.com;
+    server_name game.your-domain.com;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -82,20 +105,53 @@ server {
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
         proxy_read_timeout 3600s;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
 
-页面在 HTTPS 下会自动改用 `wss://` 连接,无需额外配置。
+启用站点并重载:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/splendor /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+HTTPS 配置(用 Let's Encrypt 获取免费证书):
+
+```bash
+sudo apt install certbot python3-certbot-nginx   # Ubuntu / Debian
+sudo certbot --nginx -d game.your-domain.com
+```
+
+页面在 HTTPS 下会自动改用 `wss://` 连接 WebSocket,无需额外配置。
+
+## 验证外网访问
+
+部署完成后,在自己手机上用 4G/5G 流量访问 `http://你的公网IP:3000`,确认页面能打开且能正常创建房间。
+
+如果无法访问,请逐一排查:
+
+1. `ss -tlnp | grep 3000` — 确认服务正在监听 `0.0.0.0:3000`
+2. `sudo ufw status` — 确认防火墙放行了 3000 端口
+3. 云厂商安全组 — 确认入方向允许 TCP 3000
 
 ## 项目结构
 
 ```
 splendor/
-├── server.js           # 全部服务端:HTTP 静态服务 + WebSocket 房间管理 + 规则引擎 + 牌库数据
-├── public/index.html   # 全部前端:大厅 + 棋盘 UI + 交互(单文件,无构建步骤)
+├── server.js           # 服务端:HTTP 静态服务 + WebSocket 房间管理 + 规则引擎 + 牌库数据
+├── public/index.html   # 前端:大厅 + 棋盘 UI + 交互(单文件,无构建步骤)
 ├── scripts/smoke.js    # 端到端冒烟测试
 └── package.json        # 唯一依赖:ws
+```
+
+## 运行测试
+
+```bash
+npm test    # 端到端冒烟测试:建房、拿宝石、预定、购买、弃子、重连等 23 项断言
 ```
 
 ## 规则速览

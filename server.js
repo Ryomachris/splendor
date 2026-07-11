@@ -109,18 +109,10 @@ function newGame(names) {
     starter, current: starter,
     pending: null,        // {type:'discard',player,count} | {type:'noble',player,options}
     gameOver: false, winner: null,
-    log: [`游戏开始,${names[starter]} 先手`],
   };
 }
 
 const sum = obj => Object.values(obj).reduce((a, b) => a + (b || 0), 0);
-const fmtGems = gems => Object.entries(gems).filter(([, n]) => n > 0)
-  .map(([c, n]) => `${GEM_NAMES[c]}×${n}`).join('、');
-
-function addLog(st, msg) {
-  st.log.push(msg);
-  if (st.log.length > 60) st.log.splice(0, st.log.length - 60);
-}
 
 function computePayment(card, p) {
   let gold = 0; const pay = {};
@@ -157,7 +149,6 @@ function applyAction(st, seat, a) {
         assert(n >= 0 && Number.isInteger(n) && p.tokens[c] >= n, '宝石数量不合法');
       }
       for (const [c, n] of Object.entries(gems)) { p.tokens[c] -= n; st.bank[c] += n; }
-      addLog(st, `${p.name} 弃掉了 ${fmtGems(gems)}`);
       st.pending = null;
       checkNobles(st);
       return;
@@ -187,7 +178,6 @@ function applyAction(st, seat, a) {
       }
       for (const c of colors) assert(st.bank[c] >= gems[c], '银行宝石不足');
       for (const c of colors) { st.bank[c] -= gems[c]; p.tokens[c] += gems[c]; }
-      addLog(st, `${p.name} 拿取了 ${fmtGems(gems)}`);
       break;
     }
     case 'reserve': {
@@ -206,9 +196,7 @@ function applyAction(st, seat, a) {
         st.board[tier][a.index] = st.decks[tier].pop() || null;
       }
       p.reserved.push({ ...card, fromDeck });
-      let goldMsg = '';
-      if (st.bank.g > 0) { st.bank.g--; p.tokens.g++; goldMsg = ',获得 1 枚黄金'; }
-      addLog(st, `${p.name} 预定了一张${fromDeck ? `${tier}级牌堆顶的卡` : `${tier}级卡`}${goldMsg}`);
+      if (st.bank.g > 0) { st.bank.g--; p.tokens.g++; }
       break;
     }
     case 'buy': {
@@ -230,8 +218,6 @@ function applyAction(st, seat, a) {
       p.cards.push(card);
       p.bonuses[card.bonus]++;
       p.points += card.points;
-      const cost = sum(pay) ? `花费 ${fmtGems(pay)}` : '免费';
-      addLog(st, `${p.name} 购买了一张${card.tier}级${GEM_NAMES[card.bonus]}卡(${card.points}分,${cost})`);
       break;
     }
     default:
@@ -252,7 +238,6 @@ function awardNoble(st, seat, idx) {
   st.nobles[idx] = null;
   p.nobles.push(noble);
   p.points += noble.points;
-  addLog(st, `贵族拜访了 ${p.name}(+3分)`);
 }
 
 function checkNobles(st) {
@@ -277,7 +262,6 @@ function finishTurn(st) {
     if (a.points !== b.points) st.winner = a.points > b.points ? 0 : 1;
     else if (a.cards.length !== b.cards.length) st.winner = a.cards.length < b.cards.length ? 0 : 1;
     else st.winner = -1; // 平局
-    addLog(st, st.winner === -1 ? '平局!' : `${st.players[st.winner].name} 获胜!`);
     return;
   }
   st.current = next;
@@ -305,7 +289,6 @@ function viewFor(room, seat) {
     nobles: st.nobles,
     current: st.current, starter: st.starter,
     pending: st.pending, gameOver: st.gameOver, winner: st.winner,
-    log: st.log.slice(-40),
     you: seat,
     rematch: [...room.rematch],
     players: st.players.map((p, i) => ({

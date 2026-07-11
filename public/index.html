@@ -55,7 +55,65 @@
   #layout { display: flex; gap: 14px; align-items: flex-start; }
   #boardCol { flex: 1 1 auto; min-width: 0; }
   #sideCol { flex: 0 0 300px; display: flex; flex-direction: column; gap: 12px; }
-  @media (max-width: 900px) { #layout { flex-direction: column; } #sideCol { flex: 1 1 auto; width: 100%; } }
+  @media (max-width: 900px) {
+    #layout { flex-direction: column; }
+    #sideCol { flex: 1 1 auto; width: 100%; flex-direction: row; flex-wrap: wrap; order: -1; }
+    #sideCol > .pPanel { flex: 1 1 calc(50% - 6px); min-width: 0; }
+  }
+  @media (max-width: 550px) {
+    #game { padding: 2px 2px 3px; }
+    #topbar { padding: 1px 0 3px; gap: 3px; font-size: 11px; }
+    #topbar .title { font-size: 12px; letter-spacing: 0; }
+    #roomTag { font-size: 10px; }
+    #turnBanner { font-size: 10px; padding: 2px 8px; }
+    #layout { gap: 2px; }
+    #sideCol { gap: 2px; }
+    #sideCol > .pPanel { flex: 1 1 calc(50% - 1px); }
+    .panel { padding: 3px 4px; }
+    .panel h3 { font-size: 9px; margin-bottom: 2px; letter-spacing: 0; }
+    #nobles { gap: 2px; margin-bottom: 2px; }
+    .noble { width: 40px; height: 40px; padding: 2px; }
+    .noble .pts { font-size: 10px; top: 2px; right: 4px; }
+    .noble .reqs { gap: 1px; bottom: 2px; left: 2px; }
+    #bank { gap: 2px; margin-bottom: 2px; }
+    .chip { width: 32px; height: 32px; font-size: 11px; border-width: 2px; }
+    .chip .cname { font-size: 7px; }
+    .chip .selbadge { width: 13px; height: 13px; font-size: 8px; top: -4px; right: -4px; }
+    #takeBar { gap: 2px; margin-bottom: 2px; }
+    #takeBar .hint { font-size: 10px; }
+    #takeBar button { font-size: 11px; padding: 4px 8px; }
+    .tierRow { gap: 2px; margin-bottom: 2px; }
+    .cardSlots { gap: 2px; }
+    .card { width: 52px; min-height: 72px; padding: 2px; }
+    .card .pts { font-size: 12px; min-height: 14px; }
+    .card .head { gap: 0; }
+    .bonusGem { width: 12px; height: 7px; }
+    .costDot { width: 12px; height: 12px; font-size: 8px; }
+    .deckBack { width: 52px; min-height: 72px; }
+    .deckBack .cnt { font-size: 8px; }
+    .pPanel .pHead { gap: 2px; margin-bottom: 1px; }
+    .pPanel .pName { font-size: 11px; }
+    .pPanel .pPts { font-size: 13px; }
+    .pPanel .offline { font-size: 9px; }
+    .assetRow { gap: 2px; margin-bottom: 1px; }
+    .asset { font-size: 9px; padding: 1px 4px; }
+    .asset .b { font-size: 8px; }
+    .miniLabel { font-size: 9px; margin: 2px 0 1px; }
+    .nobleMini { width: 16px; height: 16px; font-size: 9px; display: inline-flex !important; }
+    .reservedRow { gap: 2px; }
+    .rCard { width: 34px; height: 48px; padding: 2px; font-size: 8px; }
+    .rCard .pts { font-size: 9px; }
+    .rCard .costs { gap: 1px; }
+    .rCard .costDot { width: 10px; height: 10px; font-size: 7px; }
+    .rCard .bonusGem { top: 1px; right: 1px; width: 10px; height: 6px; }
+    .overlay { padding: 5px; }
+    .modal { padding: 8px; }
+    .modal h2 { font-size: 13px; margin-bottom: 6px; }
+    .modal .btns { margin-top: 6px; gap: 4px; }
+    .modal .btns button { font-size: 12px; padding: 5px 8px; }
+    #modalCardView { gap: 6px; }
+    #modalCardView .card { width: 60px; min-height: 84px; }
+  }
 
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
   .panel h3 { font-size: 13px; color: var(--dim); font-weight: 600; margin-bottom: 8px; letter-spacing: 1px; }
@@ -68,7 +126,6 @@
   }
   .noble.selectable { cursor: pointer; box-shadow: 0 0 0 2px var(--accent); }
   .noble .pts { position: absolute; top: 4px; right: 8px; font-weight: 800; color: var(--accent); }
-  .noble .crown { font-size: 18px; }
   .noble .reqs { position: absolute; bottom: 6px; left: 6px; display: flex; flex-direction: column; gap: 2px; }
 
   /* 宝石银行 */
@@ -138,14 +195,11 @@
   .rCard .pts { font-weight: 800; font-size: 14px; }
   .rCard .costs { margin-top: auto; display: flex; flex-wrap: wrap; gap: 2px; }
   .rCard .costDot { width: 15px; height: 15px; font-size: 10px; }
+  .rCard .bonusGem { position: absolute; top: 2px; right: 2px; width: 18px; height: 11px; }
   .rCard.hiddenCard { background: repeating-linear-gradient(45deg,#3a3352,#3a3352 6px,#332b49 6px,#332b49 12px);
     align-items: center; justify-content: center; cursor: default; color: var(--dim); }
   .nobleMini { width: 30px; height: 30px; border-radius: 6px; background: #4a3f66; display: inline-flex;
     align-items: center; justify-content: center; font-size: 14px; border: 1px solid #6b5c96; }
-
-  /* 日志 */
-  #log { max-height: 180px; overflow-y: auto; font-size: 12.5px; color: var(--dim); line-height: 1.7; }
-  #log div:last-child { color: var(--text); }
 
   /* 弹窗 */
   .overlay {
@@ -221,9 +275,8 @@
       </div>
     </div>
     <div id="sideCol">
-      <div class="panel pPanel" id="oppPanel"></div>
       <div class="panel pPanel" id="myPanel"></div>
-      <div class="panel"><h3>对局记录</h3><div id="log"></div></div>
+      <div class="panel pPanel" id="oppPanel"></div>
     </div>
   </div>
 </div>
@@ -378,7 +431,6 @@ function render() {
   renderTiers();
   renderPlayer($('myPanel'), me(), mySeat, true);
   renderPlayer($('oppPanel'), opp(), 1 - mySeat, false);
-  renderLog();
   renderPending();
   renderGameOver();
 }
@@ -394,7 +446,7 @@ function renderTurnBanner() {
 function nobleHtml(n, extra = '') {
   const reqs = Object.entries(n.req).map(([c, v]) =>
     `<div class="costDot" style="${gemStyle(c)}">${v}</div>`).join('');
-  return `<div class="noble ${extra}"><span class="crown">👑</span><span class="pts">3</span>
+  return `<div class="noble ${extra}"><span class="pts">3</span>
     <div class="reqs">${reqs}</div></div>`;
 }
 
@@ -492,7 +544,7 @@ function renderPlayer(el, p, seat, isMe) {
     `<span class="asset" style="${gemStyle(c)}">● ${p.tokens[c]}</span>`).join('') || '<span class="miniLabel">无宝石</span>';
   const bonusRow = COLORS.filter(c => p.bonuses[c] > 0).map(c =>
     `<span class="asset" style="${gemStyle(c)}"><span class="b">卡</span>${p.bonuses[c]}</span>`).join('') || '<span class="miniLabel">暂无卡牌加成</span>';
-  const nobleRow = p.nobles.map(() => '<span class="nobleMini">👑</span>').join('');
+  const nobleRow = p.nobles.map(() => '<span class="nobleMini"></span>').join('');
   el.innerHTML = `
     <div class="pHead">
       <span class="pName">${escapeHtml(p.name)}${isMe ? '(你)' : ''}</span>
@@ -518,12 +570,6 @@ function renderPlayer(el, p, seat, isMe) {
     if (isMe) cEl.onclick = () => openCardModal({ card: rc, from: 'reserve', index });
     rEl.appendChild(cEl);
   });
-}
-
-function renderLog() {
-  const el = $('log');
-  el.innerHTML = S.log.map(l => `<div>${escapeHtml(l)}</div>`).join('');
-  el.scrollTop = el.scrollHeight;
 }
 
 function escapeHtml(s) {

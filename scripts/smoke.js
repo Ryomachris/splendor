@@ -65,13 +65,12 @@ async function main() {
   ok(s.board[1].filter(Boolean).length === 4 && s.deckCounts[1] === 36, '一级卡: 场上4张 + 牌堆36张');
 
   const cli = seat => (seat === 0 ? A : B);
-  let logLen = () => A.state.log.length;
 
   async function act(seat, action) {
-    const before = A.state.log.length;
+    const prev = JSON.stringify(A.state);
     const errBefore = cli(seat).errors.length;
     cli(seat).sendJ({ type: 'action', action });
-    await waitFor(() => A.state.log.length > before || cli(seat).errors.length > errBefore
+    await waitFor(() => JSON.stringify(A.state) !== prev || cli(seat).errors.length > errBefore
       || (A.state.pending && A.state.pending.player === seat), 'action ' + action.type);
     await sleep(50);
     return cli(seat).errors.slice(errBefore);
@@ -162,7 +161,7 @@ async function main() {
   B2.sendJ({ type: 'rejoin', room: A.joined.room, key });
   await waitFor(() => B2.joined && B2.state, '重连');
   ok(B2.joined.seat === 1, '断线重连恢复座位');
-  ok(B2.state.log.length > 0 && B2.state.players[1].name === '乙', '重连后拿到完整局面');
+  ok(B2.state.players[1].name === '乙' && B2.state.players.length === 2, '重连后拿到完整局面');
 
   server.kill();
   console.log(failures === 0 ? '\n全部通过 ✓' : `\n${failures} 项失败 ✗`);
