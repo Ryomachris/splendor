@@ -10,6 +10,10 @@ const crypto = require('crypto');
 const WebSocket = require('ws');
 
 const PORT = process.env.PORT || 3000;
+const configuredRoomTimeout = Number(process.env.ROOM_TIMEOUT_MS);
+const ROOM_TIMEOUT_MS = Number.isFinite(configuredRoomTimeout) && configuredRoomTimeout > 0
+  ? configuredRoomTimeout : 10 * 60 * 1000;
+const ROOM_SWEEP_INTERVAL_MS = Math.min(1000, Math.max(25, Math.floor(ROOM_TIMEOUT_MS / 4)));
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 /* ================= 牌库数据 =================
@@ -268,7 +272,7 @@ function finishTurn(st) {
 }
 
 /* ================= 房间管理 ================= */
-const rooms = new Map(); // code -> {code, players:[{key,name,ws,connected}], state, rematch:Set, createdAt}
+const rooms = new Map(); // code -> {code, players:[{key,name,ws,connected}], state, rematch:Set, createdAt, lastActivityAt}
 
 function genRoomCode() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -309,6 +313,49 @@ function broadcast(room) {
   });
 }
 
+function roomExpiryReason(room, now = Date.now()) {
+  if (!room.state) {
+    return now - room.createdAt >= ROOM_TIMEOUT_MS ? 'invite_expired' : null;
+  }
+  return now - room.lastActivityAt >= ROOM_TIMEOUT_MS ? 'idle_timeout' : null;
+}
+
+function touchRoom(room) {
+  if (room.state) room.lastActivityAt = Date.now();
+}
+
+function detachPlayer(room, seat, ws) {
+  const player = room.players[seat];
+  if (!player || player.ws !== ws) return;
+  player.connected = false;
+  player.ws = null;
+  if (ws.ctx && ws.ctx.room === room) ws.ctx = null;
+}
+
+function closeRoom(room, reason) {
+  if (rooms.get(room.code) !== room) return;
+  rooms.delete(room.code);
+  room.players.forEach(player => {
+    const playerWs = player.ws;
+    player.connected = false;
+    player.ws = null;
+    if (!playerWs) return;
+    if (playerWs.ctx && playerWs.ctx.room === room) playerWs.ctx = null;
+    if (playerWs.readyState === WebSocket.OPEN) {
+      playerWs.send(JSON.stringify({ type: 'room_closed', room: room.code, reason }));
+    }
+  });
+}
+
+function activeRoom(code) {
+  const room = rooms.get(code);
+  if (!room) return null;
+  const reason = roomExpiryReason(room);
+  if (!reason) return room;
+  closeRoom(room, reason);
+  return null;
+}
+
 function sendErr(ws, msg) {
   if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'error', msg }));
 }
@@ -334,6 +381,16 @@ wss.on('connection', ws => {
   ws.on('pong', () => { ws.isAlive = true; });
 
   ws.on('message', raw => {
+    const { room, seat } = ws.ctx || {};
+    if (room && room.players[seat] && room.players[seat].ws === ws) {
+      const reason = roomExpiryReason(room);
+      if (reason) {
+        closeRoom(room, reason);
+        return;
+      }
+      // 已认证玩家发来的任何应用消息都视为活动；WebSocket 心跳不会进入这里。
+      touchRoom(room);
+    }
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
     try { handleMessage(ws, msg); }
@@ -346,8 +403,7 @@ wss.on('connection', ws => {
   ws.on('close', () => {
     const { room, seat } = ws.ctx || {};
     if (room && room.players[seat] && room.players[seat].ws === ws) {
-      room.players[seat].connected = false;
-      room.players[seat].ws = null;
+      detachPlayer(room, seat, ws);
       broadcast(room);
     }
   });
@@ -363,8 +419,9 @@ function handleMessage(ws, msg) {
     case 'create': {
       const code = genRoomCode();
       const key = crypto.randomBytes(8).toString('hex');
+      const now = Date.now();
       const room = {
-        code, state: null, rematch: new Set(), createdAt: Date.now(),
+        code, state: null, rematch: new Set(), createdAt: now, lastActivityAt: now,
         players: [{ key, name: cleanName(msg.name), ws, connected: true }],
       };
       rooms.set(code, room);
@@ -373,19 +430,20 @@ function handleMessage(ws, msg) {
       break;
     }
     case 'join': {
-      const room = rooms.get(String(msg.room || '').toUpperCase().trim());
-      assert(room, '房间不存在');
+      const room = activeRoom(String(msg.room || '').toUpperCase().trim());
+      assert(room, '房间不存在或已过期');
       assert(room.players.length < 2, '房间已满');
       const key = crypto.randomBytes(8).toString('hex');
       room.players.push({ key, name: cleanName(msg.name), ws, connected: true });
       ws.ctx = { room, seat: 1 };
-      ws.send(JSON.stringify({ type: 'joined', room: room.code, key, seat: 1, waiting: false }));
       room.state = newGame(room.players.map(p => p.name));
+      room.lastActivityAt = Date.now();
+      ws.send(JSON.stringify({ type: 'joined', room: room.code, key, seat: 1, waiting: false }));
       broadcast(room);
       break;
     }
     case 'rejoin': {
-      const room = rooms.get(String(msg.room || '').toUpperCase().trim());
+      const room = activeRoom(String(msg.room || '').toUpperCase().trim());
       assert(room, '房间不存在或已过期');
       const seat = room.players.findIndex(p => p.key === msg.key);
       assert(seat >= 0, '身份验证失败');
@@ -395,7 +453,8 @@ function handleMessage(ws, msg) {
       room.players[seat].ws = ws;
       room.players[seat].connected = true;
       ws.ctx = { room, seat };
-      ws.send(JSON.stringify({ type: 'joined', room: room.code, key: msg.key, seat, waiting: room.players.length < 2 }));
+      touchRoom(room);
+      ws.send(JSON.stringify({ type: 'joined', room: room.code, key: msg.key, seat, waiting: !room.state }));
       broadcast(room);
       break;
     }
@@ -417,6 +476,16 @@ function handleMessage(ws, msg) {
       broadcast(room);
       break;
     }
+    case 'leave': {
+      const { room, seat } = ws.ctx || {};
+      assert(room && room.players[seat] && room.players[seat].ws === ws, '当前不在房间中');
+      const rejoinable = !!room.state;
+      ws.send(JSON.stringify({ type: 'left', room: room.code, rejoinable }));
+      detachPlayer(room, seat, ws);
+      if (rejoinable) broadcast(room);
+      else rooms.delete(room.code);
+      break;
+    }
     default:
       break;
   }
@@ -431,13 +500,14 @@ setInterval(() => {
   });
 }, 30000);
 
-// 清理 24 小时以上的旧房间
+// 等待房间按创建时间过期；已开局房间按最后应用消息时间过期。
 setInterval(() => {
   const now = Date.now();
-  for (const [code, room] of rooms) {
-    if (now - room.createdAt > 24 * 3600 * 1000) rooms.delete(code);
+  for (const room of rooms.values()) {
+    const reason = roomExpiryReason(room, now);
+    if (reason) closeRoom(room, reason);
   }
-}, 3600 * 1000);
+}, ROOM_SWEEP_INTERVAL_MS);
 
 server.listen(PORT, () => {
   console.log(`璀璨宝石服务器已启动: http://0.0.0.0:${PORT}`);

@@ -9,6 +9,8 @@
 - 超 10 枚强制弃宝石、贵族拜访(多位可选)、15 分触发终局(补齐同等回合数)、平局按卡牌数判定
 - 房间码对战:创建房间 → 把 4 位房间码发给对手 → 对方加入即自动开局
 - 断线自动重连(浏览器刷新 / 网络闪断都能恢复对局)
+- 等待或对局中均可退出;对局座位暂时保留,可从大厅继续
+- 未使用的邀请码创建 10 分钟后失效,已开局房间 10 分钟无操作后自动解散
 - 局终可一键「再来一局」
 
 ## 在 Linux 服务器上部署(外网可访问)
@@ -54,6 +56,7 @@ sudo firewall-cmd --reload
 node server.js
 # 默认监听 3000 端口,外网访问 http://你的公网IP:3000
 # 自定义端口: PORT=8080 node server.js
+# 自定义房间超时(毫秒,默认 600000 即 10 分钟): ROOM_TIMEOUT_MS=900000 node server.js
 ```
 
 浏览器访问 `http://你的公网IP:3000`,一人点「创建房间」,另一人输入房间码「加入房间」即可对战。
@@ -72,6 +75,7 @@ Type=simple
 WorkingDirectory=/opt/splendor
 ExecStart=/usr/bin/node server.js
 Environment=PORT=3000
+Environment=ROOM_TIMEOUT_MS=600000
 Restart=always
 RestartSec=3
 
@@ -151,7 +155,7 @@ splendor/
 ## 运行测试
 
 ```bash
-npm test    # 端到端冒烟测试:建房、拿宝石、预定、购买、弃子、重连等 23 项断言
+npm test    # 端到端冒烟测试:规则、重连、主动退出恢复、邀请码和房间超时等 37 项断言
 ```
 
 ## 规则速览

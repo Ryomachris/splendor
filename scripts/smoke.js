@@ -1,5 +1,5 @@
 'use strict';
-/* 端到端冒烟测试: 起服务器 → 两个 ws 客户端建房/加入 → 拿宝石/预定/购买/弃子/重连 */
+/* 端到端冒烟测试: 对局规则、断线重连、主动退出恢复与房间超时 */
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
 
@@ -11,13 +11,15 @@ function ok(cond, name) {
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-function wsClient() {
-  const ws = new WebSocket(`ws://127.0.0.1:${PORT}`);
-  ws.state = null; ws.joined = null; ws.errors = [];
+function wsClient(port = PORT) {
+  const ws = new WebSocket(`ws://127.0.0.1:${port}`);
+  ws.state = null; ws.joined = null; ws.left = null; ws.roomClosed = null; ws.errors = [];
   ws.on('message', raw => {
     const m = JSON.parse(raw);
     if (m.type === 'state') ws.state = m.state;
     else if (m.type === 'joined') ws.joined = m;
+    else if (m.type === 'left') ws.left = m;
+    else if (m.type === 'room_closed') ws.roomClosed = m;
     else if (m.type === 'error') ws.errors.push(m.msg);
   });
   ws.sendJ = o => ws.send(JSON.stringify(o));
@@ -43,6 +45,117 @@ function canAfford(card, p) {
   return gold <= p.tokens.g;
 }
 const total = t => Object.values(t).reduce((a, b) => a + b, 0);
+
+async function lifecycleTests() {
+  const port = PORT + 1;
+  const timeout = 400;
+  const server = spawn('node', ['server.js'], {
+    env: { ...process.env, PORT: String(port), ROOM_TIMEOUT_MS: String(timeout) },
+    cwd: __dirname + '/..',
+  });
+  await new Promise(res => server.stdout.once('data', res));
+
+  const clients = [];
+  const client = () => { const ws = wsClient(port); clients.push(ws); return ws; };
+
+  try {
+    // 等待阶段主动退出会立即废弃邀请码。
+    const W = client(), Probe = client();
+    await W.ready; await Probe.ready;
+    W.sendJ({ type: 'create', name: '等待者' });
+    await waitFor(() => W.joined, '创建待退出房间');
+    const abandonedCode = W.joined.room;
+    const abandonedKey = W.joined.key;
+    W.sendJ({ type: 'leave' });
+    await waitFor(() => W.left, '等待房间退出确认');
+    ok(W.left.rejoinable === false, '等待阶段退出不保留座位');
+
+    Probe.sendJ({ type: 'join', room: abandonedCode, name: '探测者' });
+    await waitFor(() => Probe.errors.length, '已废弃邀请码拒绝加入');
+    ok(/不存在|过期/.test(Probe.errors.at(-1)), '等待阶段退出后邀请码立即失效');
+    W.sendJ({ type: 'rejoin', room: abandonedCode, key: abandonedKey });
+    await waitFor(() => W.errors.length, '已废弃房间拒绝重连');
+    ok(/不存在|过期/.test(W.errors.at(-1)), '等待阶段退出后原身份不能重连');
+
+    // 等待房间使用绝对期限，创建者消息不会延长邀请码。
+    const E = client();
+    await E.ready;
+    E.sendJ({ type: 'create', name: '过期测试' });
+    await waitFor(() => E.joined, '创建待过期房间');
+    await sleep(220);
+    E.sendJ({ type: 'unknown_waiting_message' });
+    await waitFor(() => E.roomClosed, '邀请码绝对过期', 1500);
+    ok(E.roomClosed.reason === 'invite_expired', '未使用邀请码创建满期限后自动废弃');
+
+    // 已开局房间退出后保留局面和座位，并允许原身份恢复。
+    const A = client(), B = client();
+    await A.ready; await B.ready;
+    A.sendJ({ type: 'create', name: '甲' });
+    await waitFor(() => A.joined, '生命周期测试建房');
+    B.sendJ({ type: 'join', room: A.joined.room, name: '乙' });
+    await waitFor(() => B.joined && A.state && B.state, '生命周期测试开局');
+    const activeCode = A.joined.room;
+    const activeKey = A.joined.key;
+    const stateBeforeLeave = JSON.stringify(A.state);
+
+    A.sendJ({ type: 'leave' });
+    await waitFor(() => A.left && B.state.players[0].connected === false, '进行中退出');
+    ok(A.left.rejoinable === true, '已开局房间退出后保留座位');
+    ok(B.state.players[0].connected === false, '退出后对手看到离线状态');
+
+    A.joined = null; A.state = null;
+    A.sendJ({ type: 'rejoin', room: activeCode, key: activeKey });
+    await waitFor(() => A.joined && A.state && B.state.players[0].connected, '主动退出后恢复');
+    ok(A.joined.seat === 0, '主动退出后恢复原座位');
+    ok(JSON.stringify(A.state) === stateBeforeLeave, '主动退出及恢复不改变局面');
+
+    // 合法、非法和未知应用消息都应刷新已开局房间的活动时间。
+    await sleep(230);
+    const actingSeat = A.state.current;
+    const actor = actingSeat === 0 ? A : B;
+    const beforeCurrent = A.state.current;
+    actor.sendJ({ type: 'action', action: { type: 'take', gems: { d: 1 } } });
+    await waitFor(() => A.state.current !== beforeCurrent, '合法消息刷新并执行');
+    await sleep(250);
+    ok(!A.roomClosed && !B.roomClosed, '合法操作刷新空闲期限');
+
+    const wrongSeat = A.state.current === 0 ? B : A;
+    const errorCount = wrongSeat.errors.length;
+    wrongSeat.sendJ({ type: 'action', action: { type: 'take', gems: { s: 1 } } });
+    await waitFor(() => wrongSeat.errors.length > errorCount, '非法操作返回错误');
+    await sleep(250);
+    ok(!A.roomClosed && !B.roomClosed, '非法操作也刷新空闲期限');
+
+    A.sendJ({ type: 'unknown_active_message' });
+    await sleep(250);
+    ok(!A.roomClosed && !B.roomClosed, '未知应用消息也刷新空闲期限');
+    await waitFor(() => A.roomClosed && B.roomClosed, '活动房间空闲解散', 1500);
+    ok(A.roomClosed.reason === 'idle_timeout' && B.roomClosed.reason === 'idle_timeout',
+      '已开局房间空闲满期限后通知双方解散');
+
+    const expiredErrorCount = A.errors.length;
+    A.sendJ({ type: 'rejoin', room: activeCode, key: activeKey });
+    await waitFor(() => A.errors.length > expiredErrorCount, '过期对局拒绝重连');
+    ok(/不存在|过期/.test(A.errors.at(-1)), '解散后的对局身份不能重连');
+
+    // 协议层 ping 不属于用户应用消息，不能让房间续期。
+    const P = client(), Q = client();
+    await P.ready; await Q.ready;
+    P.sendJ({ type: 'create', name: '心跳甲' });
+    await waitFor(() => P.joined, '心跳测试建房');
+    Q.sendJ({ type: 'join', room: P.joined.room, name: '心跳乙' });
+    await waitFor(() => Q.joined && P.state, '心跳测试开局');
+    for (let i = 0; i < 3; i++) {
+      await sleep(150);
+      P.ping();
+    }
+    await waitFor(() => P.roomClosed && Q.roomClosed, '心跳不刷新房间', 1500);
+    ok(P.roomClosed.reason === 'idle_timeout', 'WebSocket 心跳不会刷新空闲期限');
+  } finally {
+    clients.forEach(ws => { try { ws.close(); } catch {} });
+    server.kill();
+  }
+}
 
 async function main() {
   const server = spawn('node', ['server.js'], { env: { ...process.env, PORT: String(PORT) }, cwd: __dirname + '/..' });
@@ -163,7 +276,10 @@ async function main() {
   ok(B2.joined.seat === 1, '断线重连恢复座位');
   ok(B2.state.players[1].name === '乙' && B2.state.players.length === 2, '重连后拿到完整局面');
 
+  A.close(); B2.close();
   server.kill();
+  await sleep(100);
+  await lifecycleTests();
   console.log(failures === 0 ? '\n全部通过 ✓' : `\n${failures} 项失败 ✗`);
   process.exit(failures === 0 ? 0 : 1);
 }

@@ -27,6 +27,7 @@
   }
   button:disabled { opacity: .35; cursor: not-allowed; }
   button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
+  button.danger { background: #5c2330; color: #ffd9de; border: 1px solid #a04357; }
   input {
     font-family: inherit; font-size: 16px; padding: 10px 12px; border-radius: 8px;
     border: 1px solid var(--line); background: var(--panel2); color: var(--text); outline: none; width: 100%;
@@ -42,6 +43,7 @@
   #lobby .row input { text-transform: uppercase; letter-spacing: 3px; }
   #waitBox { text-align: center; }
   #waitCode { font-size: 44px; letter-spacing: 10px; color: var(--accent); font-weight: 800; margin: 12px 0; }
+  #resumeCode { color: var(--accent); font-weight: 800; letter-spacing: 3px; }
 
   /* ---------- 游戏 ---------- */
   #game { display: none; max-width: 1180px; margin: 0 auto; padding: 12px 14px 40px; }
@@ -51,6 +53,7 @@
   #turnBanner { margin-left: auto; padding: 6px 16px; border-radius: 20px; font-weight: 700; font-size: 14px;
     background: var(--panel2); border: 1px solid var(--line); }
   #turnBanner.mine { background: #2c4a1f; border-color: #62a943; color: #cdf3b3; }
+  #gameLeaveBtn { padding: 6px 12px; font-size: 13px; }
 
   #layout { display: flex; gap: 14px; align-items: flex-start; }
   #boardCol { flex: 1 1 auto; min-width: 0; }
@@ -66,6 +69,7 @@
     #topbar .title { font-size: 12px; letter-spacing: 0; }
     #roomTag { font-size: 10px; }
     #turnBanner { font-size: 10px; padding: 2px 8px; }
+    #gameLeaveBtn { font-size: 10px; padding: 2px 7px; }
     #layout { gap: 2px; }
     #sideCol { gap: 2px; }
     #sideCol > .pPanel { flex: 1 1 calc(50% - 1px); }
@@ -231,6 +235,10 @@
 <div id="lobby">
   <h1>璀璨宝石</h1>
   <div class="sub">Splendor · 双人在线对决</div>
+  <div class="box" id="resumeBox" style="display:none">
+    <div style="color:var(--dim);font-size:13px">你在房间 <span id="resumeCode"></span> 中还有保留的座位</div>
+    <div class="row"><button id="resumeBtn" style="flex:1">继续房间</button></div>
+  </div>
   <div class="box" id="entryBox">
     <label>你的昵称</label>
     <input id="nameInput" maxlength="12" placeholder="输入昵称">
@@ -243,7 +251,8 @@
   <div class="box" id="waitBox" style="display:none">
     <div style="color:var(--dim)">把房间码告诉你的对手</div>
     <div id="waitCode"></div>
-    <div style="color:var(--dim);font-size:13px">等待对方加入…</div>
+    <div style="color:var(--dim);font-size:13px">等待对方加入… 邀请码创建 10 分钟后失效</div>
+    <div class="row"><button id="waitLeaveBtn" class="danger" style="flex:1">退出并废弃邀请码</button></div>
   </div>
 </div>
 
@@ -253,6 +262,7 @@
     <span class="title">璀璨宝石</span>
     <span id="roomTag"></span>
     <span id="turnBanner"></span>
+    <button id="gameLeaveBtn" class="danger">退出房间</button>
   </div>
   <div id="layout">
     <div id="boardCol">
@@ -297,13 +307,17 @@
 <div class="overlay" id="discardModal"><div class="modal">
   <h2 id="discardTitle">宝石超过 10 枚,请弃掉多余的</h2>
   <div id="discardChips"></div>
-  <div class="btns"><button id="discardConfirm">确认弃掉</button></div>
+  <div class="btns">
+    <button class="danger gameLeaveControl">退出房间</button>
+    <button id="discardConfirm">确认弃掉</button>
+  </div>
 </div></div>
 
 <!-- 选贵族弹窗 -->
 <div class="overlay" id="nobleModal"><div class="modal">
   <h2>多位贵族想拜访你,请选择一位</h2>
   <div id="nobleChoices"></div>
+  <div class="btns"><button class="danger gameLeaveControl">退出房间</button></div>
 </div></div>
 
 <!-- 结算弹窗 -->
@@ -332,6 +346,7 @@ const $ = id => document.getElementById(id);
 const sum = o => Object.values(o).reduce((a, b) => a + (b || 0), 0);
 
 let ws = null, S = null, mySeat = -1;
+let rejoinPending = false;
 let sel = {};                 // 拿宝石选择
 let discardSel = {};          // 弃宝石选择
 let modalCtx = null;          // 当前弹窗卡牌 {card, from, tier, index}
@@ -339,23 +354,80 @@ const SAVE_KEY = 'splendor_session';
 
 /* ---------- 连接 ---------- */
 function connect(onOpen) {
+  if (ws && ws.readyState === WebSocket.OPEN) { onOpen(); return; }
+  if (ws && ws.readyState === WebSocket.CONNECTING) {
+    ws.addEventListener('open', onOpen, { once: true });
+    return;
+  }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(proto + '://' + location.host);
-  ws.onopen = onOpen;
-  ws.onmessage = ev => handle(JSON.parse(ev.data));
-  ws.onclose = () => setTimeout(() => {
-    const saved = getSession();
-    if (saved) connect(() => send({ type: 'rejoin', room: saved.room, key: saved.key }));
-  }, 1500);
+  const socket = new WebSocket(proto + '://' + location.host);
+  ws = socket;
+  socket.onopen = onOpen;
+  socket.onmessage = ev => handle(JSON.parse(ev.data));
+  socket.onclose = () => {
+    if (ws !== socket) return;
+    ws = null;
+    setTimeout(() => {
+      const saved = getSession();
+      if (saved && !saved.paused && !ws) rejoin(saved);
+    }, 1500);
+  };
 }
-function send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
-const getSession = () => { try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return null; } };
+function send(o) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+  ws.send(JSON.stringify(o));
+  return true;
+}
+function getSession() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
+    return saved && saved.room && saved.key ? saved : null;
+  } catch { return null; }
+}
+function saveSession(session) { localStorage.setItem(SAVE_KEY, JSON.stringify(session)); }
+function clearSession(room) {
+  const saved = getSession();
+  if (!room || (saved && saved.room === room)) localStorage.removeItem(SAVE_KEY);
+}
+function rejoin(saved) {
+  rejoinPending = true;
+  connect(() => send({ type: 'rejoin', room: saved.room, key: saved.key }));
+}
+
+function closeAllModals() {
+  document.querySelectorAll('.overlay.show').forEach(el => el.classList.remove('show'));
+}
+function renderResumeBox() {
+  const saved = getSession();
+  const resumable = saved && saved.paused;
+  $('resumeBox').style.display = resumable ? 'block' : 'none';
+  if (resumable) $('resumeCode').textContent = saved.room;
+}
+function showLobby() {
+  S = null; mySeat = -1; sel = {}; discardSel = {}; modalCtx = null;
+  closeAllModals();
+  $('game').style.display = 'none';
+  $('lobby').style.display = 'block';
+  $('entryBox').style.display = 'block';
+  $('waitBox').style.display = 'none';
+  renderResumeBox();
+}
 
 function handle(msg) {
-  if (msg.type === 'error') { toast(msg.msg); return; }
+  if (msg.type === 'error') {
+    if (rejoinPending) {
+      rejoinPending = false;
+      clearSession();
+      showLobby();
+    }
+    toast(msg.msg);
+    return;
+  }
   if (msg.type === 'joined') {
+    rejoinPending = false;
     mySeat = msg.seat;
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ room: msg.room, key: msg.key }));
+    saveSession({ room: msg.room, key: msg.key, paused: false });
+    renderResumeBox();
     if (msg.waiting) {
       $('entryBox').style.display = 'none';
       $('waitBox').style.display = 'block';
@@ -364,11 +436,36 @@ function handle(msg) {
     return;
   }
   if (msg.type === 'state' && msg.state) {
+    const previous = S;
     S = msg.state; mySeat = S.you;
     $('lobby').style.display = 'none';
     $('game').style.display = 'block';
-    $('roomTag').textContent = '房间 ' + msg.room;
+    $('roomTag').textContent = `房间 ${msg.room} · 10 分钟无操作自动解散`;
     render();
+    if (previous && previous.you === mySeat && previous.players[1 - mySeat].connected && !S.players[1 - mySeat].connected) {
+      toast('对手已离线，可在房间解散前返回');
+    }
+    return;
+  }
+  if (msg.type === 'left') {
+    rejoinPending = false;
+    const saved = getSession();
+    if (msg.rejoinable && saved && saved.room === msg.room) {
+      saveSession({ ...saved, paused: true });
+    } else {
+      clearSession(msg.room);
+    }
+    showLobby();
+    toast(msg.rejoinable ? '已退出房间，座位暂时保留' : '已退出，邀请码已废弃');
+    return;
+  }
+  if (msg.type === 'room_closed') {
+    rejoinPending = false;
+    clearSession(msg.room);
+    showLobby();
+    toast(msg.reason === 'invite_expired'
+      ? '邀请码创建已满 10 分钟，房间已解散'
+      : '房间已因 10 分钟无人操作而解散');
   }
 }
 
@@ -381,19 +478,32 @@ function toast(t) {
 
 /* ---------- 大厅 ---------- */
 $('createBtn').onclick = () => {
+  rejoinPending = false;
   const name = $('nameInput').value.trim() || '玩家1';
   connect(() => send({ type: 'create', name }));
 };
 $('joinBtn').onclick = () => {
+  rejoinPending = false;
   const name = $('nameInput').value.trim() || '玩家2';
   const code = $('codeInput').value.trim().toUpperCase();
   if (code.length !== 4) return toast('请输入 4 位房间码');
   connect(() => send({ type: 'join', room: code, name }));
 };
+$('resumeBtn').onclick = () => {
+  const saved = getSession();
+  if (saved) rejoin(saved);
+};
+$('waitLeaveBtn').onclick = () => {
+  if (confirm('确定退出吗？退出后该邀请码会立即失效。') && !send({ type: 'leave' })) {
+    toast('连接已断开，请稍后重试');
+  }
+};
 // 页面加载时尝试恢复上一局
 (() => {
   const saved = getSession();
-  if (saved) connect(() => send({ type: 'rejoin', room: saved.room, key: saved.key }));
+  if (!saved) return;
+  if (saved.paused) renderResumeBox();
+  else rejoin(saved);
 })();
 
 /* ---------- 工具 ---------- */
@@ -548,7 +658,7 @@ function renderPlayer(el, p, seat, isMe) {
   el.innerHTML = `
     <div class="pHead">
       <span class="pName">${escapeHtml(p.name)}${isMe ? '(你)' : ''}</span>
-      ${p.connected ? '' : '<span class="offline">· 已掉线</span>'}
+      ${p.connected ? '' : '<span class="offline">· 已离线</span>'}
       <span class="pPts">${p.points}分</span>
     </div>
     <div class="miniLabel">宝石(共 ${sum(p.tokens)}/10)</div>
@@ -686,10 +796,14 @@ function renderGameOver() {
   $('rematchBtn').disabled = S.rematch.includes(mySeat);
 }
 $('rematchBtn').onclick = () => send({ type: 'rematch' });
-$('leaveBtn').onclick = () => {
-  localStorage.removeItem(SAVE_KEY);
-  location.reload();
-};
+function requestGameLeave() {
+  if (confirm('确定退出当前房间吗？局面和座位会暂时保留，可从大厅继续。') && !send({ type: 'leave' })) {
+    toast('连接已断开，请稍后重试');
+  }
+}
+$('gameLeaveBtn').onclick = requestGameLeave;
+document.querySelectorAll('.gameLeaveControl').forEach(btn => btn.onclick = requestGameLeave);
+$('leaveBtn').onclick = requestGameLeave;
 </script>
 </body>
 </html>
