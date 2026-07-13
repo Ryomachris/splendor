@@ -91,7 +91,60 @@ sudo systemctl enable --now splendor
 sudo systemctl status splendor   # 确认运行正常
 ```
 
-### 5. (可选)绑定域名 + HTTPS 反向代理
+**服务管理常用命令:**
+
+```bash
+systemctl start splendor      # 启动
+systemctl stop splendor       # 关闭
+systemctl restart splendor    # 重启
+systemctl status splendor     # 查看状态
+journalctl -u splendor -f     # 查看实时日志
+```
+
+### 5. 云安全组未放行 3000 端口时用 Nginx 反代到 80 端口
+
+部分云厂商安全组不允许放行非标端口,此时无需暴露 3000 端口,用 Nginx 将 80 端口流量反向代理到本地 3000 即可。项目代码无需任何修改。
+
+安装 Nginx:
+
+```bash
+sudo apt install -y nginx
+```
+
+编辑 `/etc/nginx/sites-enabled/default`,替换为:
+
+```nginx
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    server_name _;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+    }
+}
+```
+
+重载 Nginx:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+访问 `http://公网IP` (80 端口) 即可。
+
+> **注意:** `proxy_http_version 1.1` 和 `Upgrade` / `Connection` 头是 WebSocket 代理所必需的,缺一不可。
+
+### 6. (可选)绑定域名 + HTTPS 反向代理
 
 如果有域名,推荐用 Nginx 反代到本地端口,并配置 SSL 证书。
 
