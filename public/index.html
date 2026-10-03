@@ -149,6 +149,13 @@
   #takeBar { display: none; align-items: center; gap: 10px; margin: 12px 0 4px; flex-wrap: wrap;
     background: var(--accent-soft); border-radius: 12px; padding: 8px 10px; }
   #takeBar .hint { color: var(--text); font-size: 13px; margin-right: auto; }
+  #takeBar .hint .need { color: #ffb86b; font-weight: 600; }
+  /* 无合法操作时的跳过回合提示 */
+  #passBar { display: none; align-items: center; gap: 10px; margin: 12px 0 4px; flex-wrap: wrap;
+    background: rgba(255,184,107,.12); border-radius: 12px; padding: 8px 10px; box-shadow: inset 0 0 0 1.5px rgba(255,184,107,.55); }
+  #passBar .hint { color: var(--text); font-size: 13px; margin-right: auto; }
+  #passBtn { background: linear-gradient(135deg,#ffb86b,#e0782a); color: #3a1d00; animation: pulse 2s infinite; }
+  #passBtn:hover:not(:disabled) { background: linear-gradient(135deg,#ffc98c,#ea8a3e); }
 
   /* 卡牌 */
   .tierRow { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
@@ -253,6 +260,14 @@
   #payPreview { font-size: 13px; color: var(--dim); margin-top: 12px; line-height: 1.8;
     background: rgba(255,255,255,.04); border-radius: 10px; padding: 6px 12px; }
   #payPreview:empty { display: none; }
+  /* 黄金替代选择 */
+  #payPreview .goldTip { font-size: 12px; margin-top: 2px; }
+  .payRow { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .payRow .costDot { flex-shrink: 0; }
+  .payRow .payText { flex: 1; min-width: 0; color: var(--text); }
+  .payRow .stepper { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .payRow .stepper button { padding: 2px 0; width: 28px; font-size: 15px; line-height: 1.3; border-radius: 8px; }
+  .payRow .stepper .gv { min-width: 44px; text-align: center; font-size: 12px; font-weight: 700; border-radius: 8px; padding: 2px 4px; }
   #discardChips, #nobleChoices { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 
   #toast {
@@ -295,6 +310,14 @@
     #takeBar { gap: 3px; margin-bottom: 2px; }
     #takeBar .hint { font-size: 10px; }
     #takeBar button { font-size: 11px; padding: 4px 8px; border-radius: 8px; }
+    #passBar { gap: 3px; margin: 4px 0 2px; padding: 5px 6px; border-radius: 8px; }
+    #passBar .hint { font-size: 10px; }
+    #passBar button { font-size: 11px; padding: 4px 8px; border-radius: 8px; }
+    #payPreview { font-size: 11px; padding: 4px 8px; margin-top: 8px; line-height: 1.6; }
+    #payPreview .goldTip { font-size: 10px; }
+    .payRow { gap: 5px; padding: 2px 0; }
+    .payRow .stepper button { width: 24px; font-size: 13px; padding: 1px 0; }
+    .payRow .stepper .gv { min-width: 36px; font-size: 10px; }
     .tierRow { gap: 3px; margin-bottom: 3px; }
     .cardSlots { gap: 3px; }
     .card { width: 52px; min-height: 72px; padding: 3px; border-radius: 7px; }
@@ -379,12 +402,16 @@
         <div id="nobles"></div>
       </div>
       <div class="panel" style="margin-bottom:12px">
-        <h3>宝石银行(点击选取:最多3枚不同色,或同色2枚;黄金只能靠预定获得)</h3>
+        <h3>宝石银行(点击选取:3枚不同色,银行不足3色时须拿满剩余颜色;或同色2枚;黄金只能靠预定获得)</h3>
         <div id="bank"></div>
         <div id="takeBar">
           <span class="hint" id="takeHint"></span>
           <button id="takeConfirm">确认拿取</button>
           <button id="takeCancel" class="ghost">清空</button>
+        </div>
+        <div id="passBar">
+          <span class="hint">你当前无法拿宝石、预定或购买任何卡牌</span>
+          <button id="passBtn">无可执行操作,跳过回合</button>
         </div>
       </div>
       <div class="panel">
@@ -458,6 +485,7 @@ let rejoinPending = false;
 let sel = {};                 // 拿宝石选择
 let discardSel = {};          // 弃宝石选择
 let modalCtx = null;          // 当前弹窗卡牌 {card, from, tier, index}
+let goldSub = {};             // 购卡时每种颜色用几枚黄金代替
 const SAVE_KEY = 'splendor_session';
 
 /* ---------- 连接 ---------- */
@@ -512,7 +540,7 @@ function renderResumeBox() {
   if (resumable) $('resumeCode').textContent = saved.room;
 }
 function showLobby() {
-  S = null; mySeat = -1; sel = {}; discardSel = {}; modalCtx = null;
+  S = null; mySeat = -1; sel = {}; discardSel = {}; modalCtx = null; goldSub = {};
   closeAllModals();
   $('game').style.display = 'none';
   $('lobby').style.display = 'block';
@@ -689,10 +717,37 @@ function renderBank() {
   const total = sum(sel);
   $('takeBar').style.display = total > 0 ? 'flex' : 'none';
   if (total > 0) {
-    $('takeHint').textContent = '已选: ' + Object.entries(sel).filter(([, v]) => v > 0)
-      .map(([c, v]) => `${GEMS[c].name}×${v}`).join('、');
+    const picked = Object.entries(sel).filter(([, v]) => v > 0);
+    const missing = takeMissing();
+    let hint = '已选: ' + picked.map(([c, v]) => `${GEMS[c].name}×${v}`).join('、');
+    if (missing > 0) {
+      hint += ` <span class="need">· 还需再选 ${missing} 种颜色` +
+        (picked.length === 1 && S.bank[picked[0][0]] >= 4 ? '(或再点一次该色拿 2 枚)' : '') + '</span>';
+    }
+    $('takeHint').innerHTML = hint;
+    $('takeConfirm').disabled = missing > 0;
   }
+  renderPassBar();
 }
+
+// 拿不同色宝石时还差几种颜色(同色 2 枚返回 0)。
+// 规则:不同色必须恰好拿 min(3, 银行中有剩余的颜色种数) 种,黄金不算颜色
+function takeMissing() {
+  const picked = Object.keys(sel).filter(k => sel[k] > 0);
+  if (picked.length === 1 && sel[picked[0]] === 2) return 0;
+  const required = Math.min(3, COLORS.filter(c => S.bank[c] > 0).length);
+  return Math.max(0, required - picked.length);
+}
+
+function renderPassBar() {
+  const show = !!S.canPass && isMyTurn();
+  $('passBar').style.display = show ? 'flex' : 'none';
+  $('passBtn').disabled = false;
+}
+$('passBtn').onclick = () => {
+  if (!send({ type: 'action', action: { type: 'pass' } })) return toast('连接已断开，请稍后重试');
+  $('passBtn').disabled = true;
+};
 
 function clickChip(c) {
   if (!isMyTurn()) return toast('还没轮到你');
@@ -710,6 +765,8 @@ function clickChip(c) {
   renderBank();
 }
 $('takeConfirm').onclick = () => {
+  const missing = takeMissing();
+  if (missing > 0) return toast(`还需再选 ${missing} 种颜色`);
   send({ type: 'action', action: { type: 'take', gems: { ...sel } } });
   sel = {};
 };
@@ -820,9 +877,11 @@ function openCardModal(ctx) {
     $('mBuy').style.display = '';
     $('mBuy').disabled = !afford;
     if (afford) {
+      // 默认支付 = paymentOf 的结果(最少用黄金)
       const pay = paymentOf(card, me());
-      const parts = Object.entries(pay).filter(([, v]) => v > 0).map(([c, v]) => `${GEMS[c].name}×${v}`);
-      $('payPreview').textContent = parts.length ? '将支付: ' + parts.join('、') : '卡牌加成已足够,免费购买!';
+      goldSub = {};
+      for (const c of COLORS) goldSub[c] = needOf(card, me(), c) - pay[c];
+      renderPayPreview();
     } else {
       $('payPreview').textContent = '当前宝石不足,无法购买。';
     }
@@ -831,10 +890,74 @@ function openCardModal(ctx) {
   }
   m.classList.add('show');
 }
+
+// 某色扣除卡牌加成后还需支付的数量
+function needOf(card, p, c) {
+  return Math.max(0, (card.cost[c] || 0) - p.bonuses[c]);
+}
+// 每色黄金替代数的合法范围: [max(0, need - 持有), need],且总和不超过持有黄金
+function goldRange(card, p, c) {
+  const need = needOf(card, p, c);
+  return { min: Math.max(0, need - p.tokens[c]), max: need };
+}
+// 按当前黄金替代选择得出实际支付 {d,s,e,r,o,g}
+function chosenPay(card, p) {
+  const pay = { g: 0 };
+  for (const c of COLORS) {
+    const need = needOf(card, p, c);
+    const g = Math.min(need, goldSub[c] || 0);
+    pay[c] = need - g;
+    pay.g += g;
+  }
+  return pay;
+}
+
+function renderPayPreview() {
+  const card = modalCtx.card, p = me();
+  const pay = chosenPay(card, p);
+  const parts = [...COLORS, 'g'].filter(c => pay[c] > 0).map(c => `${GEMS[c].name}×${pay[c]}`);
+  const box = $('payPreview');
+  if (!parts.length) { box.textContent = '卡牌加成已足够,免费购买!'; return; }
+  // 只有持有黄金、且至少有一种颜色可在宝石与黄金间调整时才显示选择控件
+  const adjustable = p.tokens.g > 0 && COLORS.some(c => {
+    const r = goldRange(card, p, c);
+    return r.max > r.min;
+  });
+  if (!adjustable) { box.textContent = '将支付: ' + parts.join('、'); return; }
+  const goldLeft = p.tokens.g - pay.g;
+  let html = `<div>将支付: ${parts.join('、')}</div>
+    <div class="goldTip">可用黄金代替任意颜色(持有黄金 ${p.tokens.g} 枚,还可再用 ${goldLeft} 枚):</div>`;
+  for (const c of COLORS) {
+    const need = needOf(card, p, c);
+    if (need === 0) continue;
+    const r = goldRange(card, p, c), g = goldSub[c] || 0;
+    html += `<div class="payRow">
+      <span class="costDot" style="${gemStyle(c)}">${need}</span>
+      <span class="payText">${GEMS[c].name}: ${!g ? `付 ${need} 枚` : g === need ? `全用黄金 ${g} 枚` : `付 ${need - g} 枚 + 黄金 ${g} 枚`}</span>
+      <span class="stepper">
+        <button class="ghost" data-c="${c}" data-d="-1"${g <= r.min ? ' disabled' : ''} title="少用黄金">−</button>
+        <span class="gv" style="${gemStyle('g')}">金 ${g}</span>
+        <button class="ghost" data-c="${c}" data-d="1"${g >= r.max || goldLeft <= 0 ? ' disabled' : ''} title="多用黄金">+</button>
+      </span>
+    </div>`;
+  }
+  box.innerHTML = html;
+  box.querySelectorAll('.stepper button').forEach(btn => btn.onclick = () => {
+    const c = btn.dataset.c, d = +btn.dataset.d;
+    const r = goldRange(card, me(), c);
+    const next = (goldSub[c] || 0) + d;
+    if (next < r.min || next > r.max) return;
+    if (d > 0 && chosenPay(card, me()).g >= me().tokens.g) return;
+    goldSub[c] = next;
+    renderPayPreview();
+  });
+}
+
 $('mClose').onclick = () => $('cardModal').classList.remove('show');
 $('mBuy').onclick = () => {
   const c = modalCtx;
-  send({ type: 'action', action: { type: 'buy', from: c.from, tier: c.tier, index: c.index } });
+  const pay = chosenPay(c.card, me());
+  send({ type: 'action', action: { type: 'buy', from: c.from, tier: c.tier, index: c.index, pay } });
   $('cardModal').classList.remove('show');
 };
 $('mReserve').onclick = () => {
@@ -903,6 +1026,7 @@ function renderGameOver() {
   $('overResult').textContent = S.winner === -1 ? '平局!' :
     (S.winner === mySeat ? '🎉 你赢了!' : `${S.players[S.winner].name} 获胜`);
   $('overDetail').innerHTML =
+    (S.endReason === 'stalemate' ? '双方都已无法行动,对局提前结束<br>' : '') +
     `${escapeHtml(a.name)} ${a.points}分(${a.cardCount}张卡) vs ${escapeHtml(b.name)} ${b.points}分(${b.cardCount}张卡)` +
     (S.rematch.length ? `<br>已有 ${S.rematch.length}/2 人同意再来一局` : '');
   $('rematchBtn').disabled = S.rematch.includes(mySeat);

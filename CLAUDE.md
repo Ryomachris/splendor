@@ -14,17 +14,20 @@ npm test                             # 端到端冒烟测试 scripts/smoke.js
 ```
 
 - 测试会自行 spawn `server.js`,分别占用端口 **3199**(规则与重连)和 **3200**(生命周期测试,`ROOM_TIMEOUT_MS=400`)。无需事先启动服务器,但这两个端口必须空闲。
-- 没有测试框架,也不能单独跑某一个用例:`scripts/smoke.js` 是一个脚本,`main()` 跑完规则/重连部分后调用 `lifecycleTests()`。调试某部分时可临时注释另一部分。断言用自定义的 `ok(cond, name)`,任一失败则进程退出码为 1。
+- 没有测试框架,也不能单独跑某一个用例:`scripts/smoke.js` 是一个脚本,`main()` 先跑 `ruleTests()`(直接 `require('../server.js')` 构造局面测试规则引擎),再跑端到端的规则/重连部分,最后调用 `lifecycleTests()`。调试某部分时可临时注释另一部分。断言用自定义的 `ok(cond, name)`,任一失败则进程退出码为 1。
 - 部署方式(systemd、Nginx 反代 80 端口、HTTPS)见 README;另有 `Dockerfile`(node:20-alpine,只复制 `server.js` 和 `public/`)。
 
 ## 架构
 
-全部服务端逻辑在单文件 `server.js` 中,依次为四段:
+全部服务端逻辑在单文件 `server.js` 中,依次为四段。直接运行时才启动监听和定时器;被 `require` 时只导出规则引擎(`newGame`、`applyAction`、`hasLegalAction` 等)供单元测试使用:
 
 1. **牌库数据** —— `ALL_CARDS`(90 张,三级)、`ALL_NOBLES`(10 位)。颜色用单字母键:`d` 钻石、`s` 蓝宝石、`e` 祖母绿、`r` 红宝石、`o` 玛瑙、`g` 黄金。`COLORS` 不含 `g`。前端使用同一套键。
 2. **规则引擎** —— 纯函数式地修改游戏状态 `st`:`newGame` → `applyAction(st, seat, action)` → `checkNobles` → `finishTurn`。
    - 非法操作通过 `assert(cond, msg)` 抛出 `ActionError`,消息会作为 `{type:'error', msg}` 原样发给客户端,所以文案要写给玩家看。其他异常一律回复「服务器内部错误」。
    - `st.pending` 是回合内的阻塞阶段(`discard`:宝石超过 10 枚须弃;`noble`:多位贵族可选)。存在 pending 时只接受对应操作。回合顺序为 弃宝石 → 贵族 → `finishTurn`。
+   - 拿不同色宝石必须拿 `min(3, 银行现有颜色种数)` 枚,不能主动少拿。
+   - `buy` 可带 `pay`(实际支付的宝石)让玩家主动用黄金代替彩色宝石,由 `checkPayment` 校验;不带时用 `computePayment` 的默认方案(优先彩色宝石)。
+   - `pass` 只在 `hasLegalAction` 为假时允许;双方连续跳过(`st.passes`)说明局面冻结,直接 `endGame(st, 'stalemate')` 结算;`endReason` 随视图下发,前端结算弹窗据此说明提前结束。
    - 终局:有人 ≥15 分后,轮到 `starter` 时结束(保证双方回合数相同)。平分时购卡少者胜,仍相同则 `winner = -1`。
 3. **房间管理** —— 内存中的 `rooms: Map<code, room>`,不做持久化,重启即丢失所有对局。
    - 玩家身份是加入时生成的随机 `key`;客户端把 `{room, key}` 存进 `localStorage`,用 `rejoin` 断线重连。
@@ -35,8 +38,8 @@ npm test                             # 端到端冒烟测试 scripts/smoke.js
 
 ### 客户端协议(JSON over WebSocket)
 
-- 客户端 → 服务端:`create`、`join`、`rejoin`、`action`(`take` / `reserve` / `buy` / `discard` / `noble`)、`rematch`、`leave`
-- 服务端 → 客户端:`joined`、`state`(每次变化全量推送 `viewFor` 视图)、`left`、`room_closed`、`error`
+- 客户端 → 服务端:`create`、`join`、`rejoin`、`action`(`take` / `reserve` / `buy` / `discard` / `noble` / `pass`)、`rematch`、`leave`
+- 服务端 → 客户端:`joined`、`state`(每次变化全量推送 `viewFor` 视图,含按座位计算的 `canPass`)、`left`、`room_closed`、`error`
 
 ### 前端
 
