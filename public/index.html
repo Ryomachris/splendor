@@ -520,7 +520,7 @@
     </section>
     <section>
       <h4>👑 贵族</h4>
-      <p>贵族是紫色方块,右上角的「3」是分数,身上的数字是需要的<b>卡牌加成</b>数量(不是宝石)。回合结束时满足某位贵族的要求,他会自动拜访你,<b>+3 分</b>;同时满足多位时由你选一位,每回合最多一位。带绿框的贵族表示你已满足条件。</p>
+      <p>贵族是紫色方块,角上的「3」是分数,身上的数字是需要的<b>卡牌加成</b>数量(不是宝石)。回合结束时满足某位贵族的要求,他会自动拜访你,<b>+3 分</b>;同时满足多位时由你选一位,每回合最多一位。带绿框的贵族表示你已满足条件。</p>
     </section>
     <section>
       <h4>🃏 看懂界面</h4>
@@ -569,6 +569,7 @@ const sum = o => Object.values(o).reduce((a, b) => a + (b || 0), 0);
 
 let ws = null, S = null, mySeat = -1;
 let rejoinPending = false;
+let resyncing = false;        // 重连中:尚未收到重新认证后的第一份 state
 let sel = {};                 // 拿宝石选择
 let discardSel = {};          // 弃宝石选择
 let modalCtx = null;          // 当前弹窗卡牌 {card, from, tier, index} | {deckOnly, tier}
@@ -590,7 +591,7 @@ function connect(onOpen) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const socket = new WebSocket(proto + '://' + location.host);
   ws = socket;
-  socket.onopen = () => { setNet(true); onOpen(); };
+  socket.onopen = onOpen;
   socket.onmessage = ev => handle(JSON.parse(ev.data));
   socket.onclose = () => {
     if (ws !== socket) return;
@@ -608,7 +609,7 @@ function send(o) {
   return true;
 }
 function sendAction(action) {
-  if (!send({ type: 'action', action })) toast('连接已断开,正在重连,请稍后再试');
+  if (resyncing || !send({ type: 'action', action })) toast('连接已断开,正在重连,请稍后再试');
 }
 function setNet(ok) {
   $('netWarn').style.display = ok || !S ? 'none' : 'inline';
@@ -626,6 +627,7 @@ function clearSession(room) {
 }
 function rejoin(saved) {
   rejoinPending = true;
+  resyncing = true;
   connect(() => send({ type: 'rejoin', room: saved.room, key: saved.key }));
 }
 
@@ -638,19 +640,23 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // 对局中尽量保持屏幕常亮(需 HTTPS 且浏览器支持)
-let wakeLock = null, wakeLockBusy = false;
+let wakeLock = null, wakeLockPending = false, wantAwake = false;
 async function keepAwake(on) {
+  wantAwake = on;
+  if (!on) {
+    const lock = wakeLock; wakeLock = null;
+    if (lock) lock.release().catch(() => {});
+    return;
+  }
+  if (wakeLock || wakeLockPending || !navigator.wakeLock || document.visibilityState !== 'visible') return;
+  wakeLockPending = true;
   try {
-    if (on) {
-      if (wakeLock || wakeLockBusy || !navigator.wakeLock || document.visibilityState !== 'visible') return;
-      wakeLockBusy = true;
-      wakeLock = await navigator.wakeLock.request('screen');
-      wakeLock.addEventListener('release', () => { wakeLock = null; });
-    } else if (wakeLock) {
-      const lock = wakeLock; wakeLock = null;
-      await lock.release();
-    }
-  } catch {} finally { if (on) wakeLockBusy = false; }
+    const lock = await navigator.wakeLock.request('screen');
+    // 请求期间已经离开对局:立即释放
+    if (!wantAwake) { lock.release().catch(() => {}); return; }
+    wakeLock = lock;
+    lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
+  } catch {} finally { wakeLockPending = false; }
 }
 
 function closeAllModals() {
@@ -681,8 +687,11 @@ function handle(msg) {
   if (msg.type === 'error') {
     if (rejoinPending) {
       rejoinPending = false;
+      resyncing = false;
       clearSession();
       showLobby();
+      toast('无法恢复上一局:' + msg.msg);
+      return;
     }
     toast(msg.msg);
     return;
@@ -706,7 +715,16 @@ function handle(msg) {
     showGame();
     $('roomTag').textContent = `房间 ${msg.room}`;
     setNet(true);
-    recordActions(previous, S);
+    if (resyncing) {
+      // 断线期间可能发生了多步操作,前后两份状态的差异无法还原成逐条动作,只提示一下
+      resyncing = false;
+      if (previous && previous.you === S.you) logs = ['已重新连接(断线期间的动作未逐条记录)', ...logs].slice(0, 20);
+    } else recordActions(previous, S);
+    const oppSeat = 1 - mySeat;
+    if (previous && S.gameOver && S.rematch.includes(oppSeat) && !previous.rematch.includes(oppSeat) && !S.rematch.includes(mySeat)) {
+      overHidden = false;
+      toast(`${opp().name} 想再来一局`, 'info');
+    }
     render();
     notifyTurn(previous);
     if (previous && previous.you === mySeat && previous.players[1 - mySeat].connected && !S.players[1 - mySeat].connected) {
@@ -820,8 +838,13 @@ $('copyBtn').onclick = async () => {
   }
   const saved = getSession();
   if (!saved) return;
-  if (saved.paused) renderResumeBox();
-  else rejoin(saved);
+  if (invited && saved.room !== invited && !saved.paused) {
+    // 通过别人的邀请链接进来:留在大厅处理邀请,旧对局改为「继续房间」手动恢复
+    saveSession({ ...saved, paused: true });
+  }
+  const current = getSession();
+  if (current.paused) renderResumeBox();
+  else rejoin(current);
 })();
 
 /* ---------- 工具 ---------- */
@@ -829,24 +852,19 @@ const isMyTurn = () => S && !S.gameOver && S.current === mySeat && !S.pending;
 const me = () => S.players[mySeat];
 const opp = () => S.players[1 - mySeat];
 
-function canAfford(card, p) {
-  let gold = 0;
-  for (const c of COLORS) {
-    const need = Math.max(0, (card.cost[c] || 0) - p.bonuses[c]);
-    gold += Math.max(0, need - p.tokens[c]);
-  }
-  return gold <= p.tokens.g;
-}
+// 与服务端 computePayment 相同的算法(修改支付规则时两边同步改)。
+// pay.g 为需要的黄金数,可能超过持有量;short 为各色需由黄金补足的数量。
 function paymentOf(card, p) {
-  let gold = 0; const pay = {};
+  const pay = { g: 0 }, short = {};
   for (const c of COLORS) {
     const need = Math.max(0, (card.cost[c] || 0) - p.bonuses[c]);
     pay[c] = Math.min(need, p.tokens[c]);
-    gold += need - pay[c];
+    if (need > pay[c]) short[c] = need - pay[c];
+    pay.g += need - pay[c];
   }
-  pay.g = gold;
-  return pay;
+  return { pay, short };
 }
+const canAfford = (card, p) => paymentOf(card, p).pay.g <= p.tokens.g;
 function gemStyle(c) {
   return `background:var(--c-${c}-bg);color:var(--c-${c}-fg)`;
 }
@@ -867,7 +885,7 @@ function escapeHtml(s) {
 /* ---------- 动作记录(根据前后两次状态推断) ---------- */
 function recordActions(P, N) {
   if (!P || P.you !== N.you) { logs = []; return; }
-  if (P.gameOver && !N.gameOver) { logs = ['新的一局开始了']; overHidden = false; return; }
+  if (P.gameOver && !N.gameOver) { logs = ['新的一局开始了']; return; }
   const found = [];
   N.players.forEach((np, i) => {
     const pp = P.players[i];
@@ -899,6 +917,8 @@ function recordActions(P, N) {
     if (parts.length) found.push(who + parts.join(','));
   });
   if (N.gameOver && !P.gameOver) found.push('对局结束');
+  const o = 1 - N.you;
+  if (N.rematch.includes(o) && !P.rematch.includes(o)) found.push(`${N.players[o].name}想再来一局`);
   logs = [...found.reverse(), ...logs].slice(0, 20);
 }
 
@@ -935,7 +955,12 @@ function render() {
 
 function renderTurnBanner() {
   const b = $('turnBanner');
-  if (S.gameOver) { b.textContent = '对局结束 · 查看结果'; b.className = 'over'; return; }
+  if (S.gameOver) {
+    const asked = S.rematch.includes(1 - mySeat) && !S.rematch.includes(mySeat);
+    b.textContent = asked ? '对手想再来一局 · 点此查看' : '对局结束 · 查看结果';
+    b.className = 'over' + (asked ? ' mine' : '');
+    return;
+  }
   const last = S.players.some(p => p.points >= 15) ? ' · 最后一轮' : '';
   const pend = S.pending;
   const mine = S.current === mySeat;
@@ -1081,13 +1106,17 @@ function renderTiers() {
 function fitBoard() {
   if (!S) return;
   document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px');
-  showGame();
   $('game').classList.toggle('roomy', compactMQ.matches && window.innerHeight / window.innerWidth > 1.9);
   const board = $('board');
   const nobles = [...board.querySelectorAll('#nobles .noble')];
   if (!compactMQ.matches) {
-    board.classList.remove('side', 'tight');
-    ['--cw', '--nw', '--nh'].forEach(k => board.style.removeProperty(k));
+    // 宽屏 / 横屏:页面可滚动,只需按棋盘列宽限制卡宽,避免窄窗口时溢出盖住玩家面板
+    const cw = Math.max(30, Math.floor(Math.min(100, (board.clientWidth - 4 * 10) / 5)));
+    board.classList.remove('side');
+    board.classList.toggle('tight', cw < 62);
+    board.style.setProperty('--cw', cw + 'px');
+    board.style.setProperty('--nw', Math.floor(cw * 0.84) + 'px');
+    board.style.setProperty('--nh', Math.floor(cw * 0.84) + 'px');
     nobles.forEach(n => n.classList.remove('wide'));
     return;
   }
@@ -1118,6 +1147,7 @@ function scheduleFit() { cancelAnimationFrame(fitFrame); fitFrame = requestAnima
 window.addEventListener('resize', scheduleFit);
 window.addEventListener('orientationchange', () => setTimeout(fitBoard, 300));
 if (window.visualViewport) visualViewport.addEventListener('resize', scheduleFit);
+compactMQ.addEventListener('change', () => { if (S) { showGame(); scheduleFit(); } });
 
 function walletHtml(p) {
   return `<div class="wallet">${[...COLORS, 'g'].map(c => {
@@ -1230,24 +1260,18 @@ function openCardModal(ctx) {
         <li>费用:${pchips(card.cost)}</li>
       </ul>`;
     const p = me();
-    const afford = canAfford(card, p);
+    const { pay, short } = paymentOf(card, p);
+    const afford = pay.g <= p.tokens.g;
     $('mBuy').style.display = mine ? '' : 'none';
     $('mBuy').disabled = !myTurn || !afford;
     if (!mine) $('payPreview').innerHTML = '';
     else if (afford) {
-      const pay = paymentOf(card, p);
       $('payPreview').innerHTML = sum(pay)
         ? `<span class="good">买得起</span> · 将支付 ${pchips(pay)}`
         : '<span class="good">卡牌加成已足够,可以免费购买!</span>';
     } else {
-      const short = {};
-      for (const c of COLORS) {
-        const s = Math.max(0, (card.cost[c] || 0) - p.bonuses[c] - p.tokens[c]);
-        if (s) short[c] = s;
-      }
-      const missing = sum(short) - p.tokens.g;
       $('payPreview').innerHTML = `<span class="bad">宝石不足</span> · 还差 ${pchips(short)}` +
-        (p.tokens.g ? `<br>你的 ${p.tokens.g} 枚黄金可抵 ${p.tokens.g} 枚,仍缺 ${missing} 枚` : '');
+        (p.tokens.g ? `<br>你的 ${p.tokens.g} 枚黄金可抵 ${p.tokens.g} 枚,仍缺 ${pay.g - p.tokens.g} 枚` : '');
     }
     $('mReserve').style.display = ctx.from === 'board' ? '' : 'none';
     $('mReserve').disabled = !myTurn || resvFull;

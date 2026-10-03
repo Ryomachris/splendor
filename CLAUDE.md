@@ -40,4 +40,4 @@ npm test                             # 端到端冒烟测试 scripts/smoke.js
 
 ### 前端
 
-`public/index.html` 是单文件(HTML + CSS + 原生 JS),无框架、无构建。它只根据服务端推送的 `state` 渲染,不做权威判定。但其中的 `canAfford` / `paymentOf`(可购买高亮与支付预览)复制了服务端 `computePayment` 的算法,修改支付规则时两边要同步改。状态栏里的「最近动作」由 `recordActions` 对比前后两次 `state` 推断得出(服务端不发送动作日志),新增状态字段时如影响展示需同步考虑。邀请链接 `/?room=XXXX` 只在前端读取并预填房间码。手机竖屏(`max-width: 899px` 且 portrait)下 `#game` 固定为视口高度不滚动,由 `fitBoard` 按剩余空间计算卡牌宽度 `--cw` 并在「贵族在上方」与「贵族在右侧」两种排布间选卡牌更大的一种;在固定区域里加内容时注意别把棋盘挤没。WebSocket 地址由 `location` 推导(HTTPS 下自动用 `wss://`),所以反代时需要转发 `Upgrade` 头。
+`public/index.html` 是单文件(HTML + CSS + 原生 JS),无框架、无构建。它只根据服务端推送的 `state` 渲染,不做权威判定。但其中的 `paymentOf`(可购买高亮、支付预览和缺口提示都基于它,`canAfford` 只是包装)复制了服务端 `computePayment` 的算法,修改支付规则时两边要同步改。状态栏里的「最近动作」由 `recordActions` 对比前后两次 `state` 推断得出(服务端不发送动作日志),新增状态字段时如影响展示需同步考虑;断线重连后的第一份 `state` 不做推断(`resyncing`),因为中间可能隔了多步。邀请链接 `/?room=XXXX` 只在前端读取并预填房间码。手机竖屏(`max-width: 899px` 且 portrait)下 `#game` 固定为视口高度不滚动,由 `fitBoard` 按剩余空间计算卡牌宽度 `--cw` 并在「贵族在上方」与「贵族在右侧」两种排布间选卡牌更大的一种;在固定区域里加内容时注意别把棋盘挤没。WebSocket 地址由 `location` 推导(HTTPS 下自动用 `wss://`),所以反代时需要转发 `Upgrade` 头。
