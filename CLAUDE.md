@@ -40,4 +40,4 @@ npm test                             # 端到端冒烟测试 scripts/smoke.js
 
 ### 前端
 
-`public/index.html` 是单文件(HTML + CSS + 原生 JS),无框架、无构建。它只根据服务端推送的 `state` 渲染,不做权威判定。但其中的 `canAfford` / `paymentOf`(可购买高亮与支付预览)复制了服务端 `computePayment` 的算法,修改支付规则时两边要同步改。WebSocket 地址由 `location` 推导(HTTPS 下自动用 `wss://`),所以反代时需要转发 `Upgrade` 头。
+`public/index.html` 是单文件(HTML + CSS + 原生 JS),无框架、无构建。它只根据服务端推送的 `state` 渲染,不做权威判定。但其中的 `canAfford` / `paymentOf`(可购买高亮与支付预览)复制了服务端 `computePayment` 的算法,修改支付规则时两边要同步改。状态栏里的「最近动作」由 `recordActions` 对比前后两次 `state` 推断得出(服务端不发送动作日志),新增状态字段时如影响展示需同步考虑。邀请链接 `/?room=XXXX` 只在前端读取并预填房间码。WebSocket 地址由 `location` 推导(HTTPS 下自动用 `wss://`),所以反代时需要转发 `Upgrade` 头。
