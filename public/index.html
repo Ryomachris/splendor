@@ -34,7 +34,7 @@
     overscroll-behavior-y: none;
     -webkit-text-size-adjust: 100%;
   }
-  button, .chip, .card, .deckBack, .rCard, .noble { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  button, .chip, .card, .deckBack, .rMini, .noble, .pPanel, #infoLine { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   button {
     font-family: inherit; cursor: pointer; border: none; border-radius: 10px;
     background: var(--accent); color: #2a1e05; font-weight: 700; padding: 10px 18px; font-size: 15px;
@@ -44,7 +44,7 @@
   button:disabled { opacity: .35; cursor: not-allowed; }
   button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
   button.danger { background: #5c2330; color: #ffd9de; border: 1px solid #a04357; }
-  button.small { min-height: 32px; padding: 5px 11px; font-size: 13px; border-radius: 8px; }
+  button.small { min-height: 30px; padding: 4px 10px; font-size: 13px; border-radius: 8px; }
   input {
     font-family: inherit; font-size: 16px; padding: 10px 12px; border-radius: 10px; min-height: 44px;
     border: 1px solid var(--line); background: var(--panel2); color: var(--text); outline: none; width: 100%;
@@ -72,69 +72,108 @@
   #resumeCode { color: var(--accent); font-weight: 800; letter-spacing: 3px; }
   #inviteHint { display: none; color: var(--ok); }
 
-  /* ---------- 游戏 ---------- */
-  #game {
-    display: none; max-width: 1180px; margin: 0 auto;
-    padding: 0 calc(8px + var(--safe-r)) calc(24px + var(--safe-b)) calc(8px + var(--safe-l));
-  }
-  #topbar {
-    position: sticky; top: 0; z-index: 20; background: var(--bg);
-    display: flex; align-items: center; gap: 6px;
-    padding: calc(6px + var(--safe-t)) 0 6px;
-  }
+  /* ---------- 游戏(默认:宽屏 / 横屏布局) ---------- */
+  #game { display: none; max-width: 1180px; margin: 0 auto; padding: 0 14px 40px; }
+  #topbar { display: flex; align-items: center; gap: 10px; padding: 10px 0 6px; }
   #topbar .title { font-weight: 800; color: var(--accent); letter-spacing: 2px; white-space: nowrap; }
-  #roomTag { color: var(--dim); font-size: 12px; white-space: nowrap; }
+  #roomTag { color: var(--dim); font-size: 13px; white-space: nowrap; }
   #turnBanner {
-    flex: 1; min-width: 0; text-align: center; padding: 5px 10px; border-radius: 20px; font-weight: 700; font-size: 13px;
+    margin-left: auto; min-width: 0; text-align: center; padding: 5px 14px; border-radius: 20px; font-weight: 700; font-size: 14px;
     background: var(--panel2); border: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   #turnBanner.mine { background: #2c4a1f; border-color: #62a943; color: #cdf3b3; animation: pulse 1.6s ease-in-out infinite; }
   #turnBanner.over { cursor: pointer; }
   @keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(98,169,67,.25); } }
 
-  #statusBar {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-    padding: 7px 10px; margin-bottom: 8px; font-size: 13px;
+  #infoLine {
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 5px 10px; margin-bottom: 10px; font-size: 13px; min-height: 30px;
   }
-  #hint { color: var(--text); }
-  #netWarn { display: none; color: #ff9a9a; font-weight: 700; }
-  #log { list-style: none; margin-top: 3px; }
-  #log li { color: var(--dim); font-size: 12px; line-height: 1.6; }
-  #log li:first-child { color: #d9d2ea; }
-  #log li::before { content: '› '; color: var(--accent); }
+  #info { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #info .warn { color: #ffb36b; }
+  #info .act::before { content: '› '; color: var(--accent); }
+  #infoMore { color: var(--dim); font-size: 11px; white-space: nowrap; }
+  #netWarn { display: none; color: #ff9a9a; font-weight: 700; white-space: nowrap; }
 
-  #layout { display: flex; flex-direction: column; gap: 8px; }
-  #boardCol, #sideCol { display: contents; }
-  #oppPanel { order: 1; } #noblesPanel { order: 2; } #tiersPanel { order: 3; }
-  #bankPanel { order: 4; } #myPanel { order: 5; }
+  #layout { display: flex; gap: 14px; align-items: flex-start; }
+  #boardCol { display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto; min-width: 0; }
+  #sideCol { display: flex; flex-direction: column; gap: 12px; flex: 0 0 320px; }
+  @media (max-width: 899px) { #sideCol { flex-basis: 250px; } }
 
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px; min-width: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-width: 0; }
   .panel h3 {
-    font-size: 12px; color: var(--dim); font-weight: 600; margin-bottom: 6px;
+    font-size: 13px; color: var(--dim); font-weight: 600; margin-bottom: 8px;
     display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
   }
   .panel h3 .more { font-weight: 400; font-size: 11px; opacity: .85; text-align: right; }
 
-  /* 贵族 */
-  #nobles { display: flex; gap: 8px; }
+  /* 棋盘: 贵族 + 三级发展卡。尺寸由 --cw(卡宽) / --nw --nh(贵族宽高) 控制 */
+  #board { --cw: 100px; --nw: 84px; --nh: 84px; --g: 10px; display: flex; flex-direction: column; gap: var(--g); }
+  #board.side { flex-direction: row; align-items: center; justify-content: center; }
+  #nobles { display: flex; gap: var(--g); }
+  #board.side #nobles { flex-direction: column; order: 2; }
+  #tiers { display: flex; flex-direction: column; gap: var(--g); }
+  .tierRow { display: flex; gap: var(--g); }
+
   .noble {
-    width: 64px; height: 64px; border-radius: 10px; background: linear-gradient(145deg,#4a3f66,#332b49);
-    border: 1px solid #6b5c96; padding: 4px; position: relative; flex-shrink: 0;
+    width: var(--nw); height: var(--nh); border-radius: .6em; flex-shrink: 0; position: relative;
+    font-size: clamp(9px, calc(min(var(--nw), var(--nh)) * .24), 15px);
+    background: linear-gradient(145deg,#4a3f66,#332b49); border: 1px solid #6b5c96;
   }
   .noble.gone { opacity: .15; }
-  .noble.selectable { cursor: pointer; box-shadow: 0 0 0 3px var(--accent); width: 80px; height: 80px; }
-  .noble .pts { position: absolute; top: 2px; right: 6px; font-weight: 800; color: var(--accent); font-size: 14px; }
-  .noble .reqs { position: absolute; bottom: 4px; left: 4px; display: flex; flex-direction: column; gap: 2px; }
+  .noble.mine { box-shadow: 0 0 0 2px var(--ok); }
+  .noble.selectable { cursor: pointer; box-shadow: 0 0 0 3px var(--accent); }
+  .noble .pts { position: absolute; top: .2em; right: .45em; font-weight: 800; color: var(--accent); font-size: 1.15em; line-height: 1.1; }
+  .noble .reqs { position: absolute; bottom: .35em; left: .35em; display: flex; flex-direction: column; gap: .15em; }
+  .noble.wide .reqs { flex-direction: row; }
+  #board.side .noble .pts { right: auto; left: .4em; }
+  #board.side .reqBar { height: 1.25em; }
+  #board.tight .card.affordable::after { content: none; }
   .reqBar {
-    width: 18px; height: 15px; border-radius: 3px; font-size: 10px; font-weight: 800;
+    font-size: .85em; width: 1.75em; height: 1.4em; border-radius: .25em; font-weight: 800; line-height: 1;
     display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.4);
   }
-  .noble.mine { box-shadow: 0 0 0 2px var(--ok); }
+
+  .card, .deckBack {
+    width: var(--cw); height: calc(var(--cw) * 1.4); flex-shrink: 0;
+    font-size: calc(var(--cw) * .2); border-radius: .55em; position: relative;
+  }
+  .deckBack {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1em;
+    font-weight: 800; cursor: pointer; border: 2px dashed rgba(255,255,255,.3); line-height: 1.2;
+  }
+  .deckBack.t1 { background: #274b31; } .deckBack.t2 { background: #52432a; } .deckBack.t3 { background: #2a3a5c; }
+  .deckBack .cnt { font-size: .8em; color: #cfc7e4; font-weight: 600; }
+  .deckBack .lbl { font-size: .68em; color: var(--dim); font-weight: 600; }
+  .deckBack.empty { opacity: .3; cursor: default; }
+  .card {
+    padding: .3em; cursor: pointer; border: 1px solid rgba(255,255,255,.18);
+    display: flex; flex-direction: column; transition: transform .08s;
+  }
+  .card:active { transform: scale(.96); }
+  .card.empty { visibility: hidden; }
+  .card .head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .card .pts { font-size: 1.45em; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,.6); line-height: 1; min-height: 1em; }
+  .card .costs { margin-top: auto; display: grid; grid-template-columns: repeat(2, max-content); gap: .15em; }
+  .costDot {
+    font-size: .82em; width: 1.6em; height: 1.6em; border-radius: 50%; font-weight: 800; line-height: 1;
+    display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.45);
+  }
+  .bonusGem { width: 1.3em; height: .9em; border-radius: .2em; border: 1px solid rgba(255,255,255,.55); flex-shrink: 0; }
+  .card.affordable { box-shadow: 0 0 0 2px var(--ok); }
+  .card.affordable::after {
+    content: '可买'; position: absolute; bottom: .25em; right: .25em; font-size: .62em; font-weight: 800;
+    background: var(--ok); color: #173b0b; border-radius: .3em; padding: 0 .25em; line-height: 1.5;
+  }
+  .card.big { --cw: 104px; cursor: default; }
+  .card.big .costs { grid-template-columns: max-content; }
 
   /* 宝石银行 */
-  #bank { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+  #bankRow { display: flex; align-items: center; gap: 8px; }
+  #bank { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; max-width: 460px; }
   .chip {
-    width: 100%; max-width: 62px; aspect-ratio: 1; justify-self: center; border-radius: 50%;
+    width: 100%; max-width: 64px; aspect-ratio: 1; justify-self: center; border-radius: 50%;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     font-weight: 800; font-size: 18px; line-height: 1.1;
     border: 3px solid rgba(255,255,255,.25); cursor: pointer; position: relative;
@@ -143,103 +182,62 @@
   .chip:active { transform: scale(.94); }
   .chip.disabled { opacity: .35; cursor: not-allowed; }
   .chip.picked { box-shadow: 0 0 0 3px var(--accent); }
-  .chip .cname { font-size: 9px; font-weight: 600; opacity: .9; }
+  .chip .cname { font-size: 10px; font-weight: 600; opacity: .9; }
   .chip .selbadge {
     position: absolute; top: -6px; right: -6px; background: var(--accent); color: #2a1e05;
-    min-width: 22px; height: 22px; border-radius: 11px; font-size: 13px; padding: 0 4px;
+    min-width: 20px; height: 20px; border-radius: 10px; font-size: 12px; padding: 0 4px;
     display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,.5);
   }
-  #takeBar { display: none; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  #takeBar .hint { color: var(--dim); font-size: 12px; flex: 1 1 100%; }
-  #takeBar .hint .warn { color: #ffb36b; }
-  #takeBar button { flex: 1; }
-
-  /* 卡牌 */
-  .tierRow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; margin-bottom: 5px; }
-  .tierRow:last-child { margin-bottom: 0; }
-  .deckBack, .card { width: 100%; aspect-ratio: 5 / 7; border-radius: 9px; min-width: 0; }
-  .deckBack {
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    font-weight: 800; cursor: pointer; border: 2px dashed rgba(255,255,255,.3); font-size: 13px;
-  }
-  .deckBack.t1 { background: #274b31; } .deckBack.t2 { background: #52432a; } .deckBack.t3 { background: #2a3a5c; }
-  .deckBack .cnt { font-size: 11px; color: #cfc7e4; font-weight: 600; }
-  .deckBack .lbl { font-size: 10px; color: var(--dim); font-weight: 600; }
-  .deckBack.empty { opacity: .3; cursor: default; }
-  .card {
-    padding: 4px; position: relative; cursor: pointer; border: 1px solid rgba(255,255,255,.18);
-    display: flex; flex-direction: column; transition: transform .08s;
-  }
-  .card:active { transform: scale(.96); }
-  .card.empty { visibility: hidden; }
-  .card .head { display: flex; justify-content: space-between; align-items: flex-start; }
-  .card .pts { font-size: 18px; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,.6); line-height: 1; min-height: 18px; }
-  .card .costs { margin-top: auto; display: grid; grid-template-columns: repeat(2, max-content); gap: 2px; }
-  .costDot {
-    width: 17px; height: 17px; border-radius: 50%; font-size: 11px; font-weight: 800; line-height: 1;
-    display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.45);
-  }
-  .bonusGem { width: 18px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,.55); flex-shrink: 0; }
-  .card.affordable { box-shadow: 0 0 0 2px var(--ok); }
-  .card.affordable::after {
-    content: '可买'; position: absolute; bottom: 3px; right: 3px; font-size: 9px; font-weight: 800;
-    background: var(--ok); color: #173b0b; border-radius: 4px; padding: 0 3px; line-height: 14px;
-  }
-  .card.big { width: 104px; flex-shrink: 0; padding: 7px; cursor: default; }
-  .card.big .pts { font-size: 24px; min-height: 24px; }
-  .card.big .bonusGem { width: 26px; height: 17px; }
-  .card.big .costs { grid-template-columns: max-content; gap: 3px; }
-  .card.big .costDot { width: 22px; height: 22px; font-size: 13px; }
+  #takeBtns { display: none; gap: 6px; flex-shrink: 0; }
+  #takeBtns.show { display: flex; }
+  #takeBtns button { min-height: 40px; padding: 6px 12px; }
 
   /* 玩家面板 */
+  .pPanel { cursor: pointer; }
   .pPanel.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-  .pPanel .pHead { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-  .pPanel .pName { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .pPanel .turnDot { color: var(--accent); font-size: 12px; white-space: nowrap; }
-  .pPanel .pPts { margin-left: auto; font-size: 20px; font-weight: 800; color: var(--accent); white-space: nowrap; line-height: 1; }
-  .pPanel .pPts small { font-size: 11px; color: var(--dim); font-weight: 600; }
-  .pPanel .offline { color: #e07777; font-size: 12px; white-space: nowrap; }
-  .pStats { font-size: 11px; color: var(--dim); margin-bottom: 6px; }
+  .pHead { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; white-space: nowrap; }
+  .pName { font-weight: 700; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 1; }
+  .turnDot { color: var(--accent); font-size: 12px; }
+  .offline { color: #e07777; font-size: 12px; }
+  .pStats { font-size: 11px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .pStats .full { color: #ffb36b; font-weight: 700; }
-  .wallet { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+  .pPts { margin-left: auto; font-size: 20px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .pPts small { font-size: 11px; color: var(--dim); font-weight: 600; }
+  .pBody { display: flex; align-items: center; gap: 8px; }
+  .wallet { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; max-width: 300px; }
   .wcell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
   .wcard, .wchip {
     display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;
     border: 1px solid rgba(255,255,255,.35); line-height: 1;
   }
-  .wcard { width: 100%; max-width: 40px; height: 22px; border-radius: 4px; }
+  .wcard { width: 100%; max-width: 38px; height: 18px; border-radius: 4px; }
   .wcard.none { visibility: hidden; }
-  .wchip { width: 26px; height: 26px; border-radius: 50%; }
+  .wchip { width: 24px; height: 24px; border-radius: 50%; }
   .wcard.zero, .wchip.zero { opacity: .22; }
-  .wpow { font-size: 10px; color: var(--dim); line-height: 1; }
-  .miniLabel { font-size: 11px; color: var(--dim); margin: 6px 0 4px; }
-  .reservedRow { display: flex; gap: 6px; }
-  .rCard { width: 52px; aspect-ratio: 5 / 7; flex-shrink: 0; }
-  .rCard.card { padding: 3px; }
-  .rCard.card .pts { font-size: 14px; min-height: 14px; }
-  .rCard.card .costDot { width: 14px; height: 14px; font-size: 9px; }
-  .rCard.card .bonusGem { width: 14px; height: 10px; }
-  .rCard.card.affordable::after { content: none; }
-  .rCard.hiddenCard {
-    border-radius: 8px; border: 1px solid rgba(255,255,255,.25); font-size: 10px; text-align: center;
-    background: repeating-linear-gradient(45deg,#3a3352,#3a3352 6px,#332b49 6px,#332b49 12px);
-    display: flex; align-items: center; justify-content: center; color: var(--dim); line-height: 1.4;
+  .reservedRow { display: flex; gap: 4px; flex-shrink: 0; }
+  .rMini {
+    width: 32px; height: 44px; border-radius: 6px; border: 1px solid rgba(255,255,255,.3); position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-around; padding: 2px 0;
+    font-size: 10px; font-weight: 800; line-height: 1.1; cursor: pointer;
   }
-  .legendTip { white-space: nowrap; }
-  .reservedRow:empty { display: none; }
+  .rMini .pts { font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,.6); min-height: 14px; }
+  .rMini .bonusGem { font-size: 10px; }
+  .rMini.affordable { box-shadow: 0 0 0 2px var(--ok); }
+  .rMini.hidden {
+    background: repeating-linear-gradient(45deg,#3a3352,#3a3352 5px,#332b49 5px,#332b49 10px);
+    justify-content: center; color: var(--dim); font-weight: 600; text-align: center;
+  }
 
-  /* 弹窗(手机上为底部抽屉) */
+  /* 弹窗(手机竖屏上为底部抽屉) */
   .overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6);
-    align-items: flex-end; justify-content: center; z-index: 50;
+    align-items: center; justify-content: center; z-index: 50; padding: 20px;
   }
   .overlay.show { display: flex; }
   #helpModal { z-index: 60; }
   .modal {
-    background: var(--panel); border: 1px solid var(--line); border-bottom: none;
-    border-radius: 18px 18px 0 0; width: 100%; max-width: 520px;
-    max-height: 88vh; max-height: 88dvh; overflow-y: auto; -webkit-overflow-scrolling: touch;
-    padding: 16px calc(16px + var(--safe-r)) calc(16px + var(--safe-b)) calc(16px + var(--safe-l));
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: 100%; max-width: 520px;
+    max-height: 90vh; max-height: 90dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 22px;
     animation: sheetUp .18s ease-out;
   }
   @keyframes sheetUp { from { transform: translateY(30px); opacity: .4; } }
@@ -260,9 +258,25 @@
   }
   #modalNote { font-size: 12px; color: #ffb36b; margin-top: 10px; }
   #modalNote:empty { display: none; }
-  #discardChips, #nobleChoices { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
-  #nobleChoices { display: flex; flex-wrap: wrap; gap: 12px; }
+  #discardChips { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+  #discardChips .chip { max-width: 54px; }
+  #nobleChoices { --nw: 80px; --nh: 80px; display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
   .modalSub { font-size: 13px; color: var(--dim); }
+  .sheetLabel { color: var(--dim); font-size: 12px; margin-top: 12px; }
+  #playerSheetBody .wallet { max-width: none; margin-top: 4px; }
+  #playerSheetBody .wcard { height: 24px; max-width: none; font-size: 14px; }
+  #playerSheetBody .wchip { width: 30px; height: 30px; font-size: 14px; }
+  #playerSheetBody .resvBig { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; --cw: 76px; }
+  #playerSheetBody .hiddenBig {
+    width: 76px; height: 106px; border-radius: 9px; border: 1px solid rgba(255,255,255,.25); color: var(--dim);
+    background: repeating-linear-gradient(45deg,#3a3352,#3a3352 6px,#332b49 6px,#332b49 12px);
+    display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px;
+  }
+  #playerSheetBody .nobleRow { --nw: 60px; --nh: 60px; display: flex; gap: 8px; margin-top: 6px; }
+  #logList { list-style: none; }
+  #logList li { padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  #logList li:first-child { color: var(--accent); }
+  #logList li:last-child { border-bottom: none; }
 
   /* 说明 */
   .helpBody section { margin-bottom: 16px; }
@@ -275,7 +289,6 @@
   .colorRow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
   .colorRow span { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #d9d2ea; }
   .colorRow i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,.4); flex-shrink: 0; }
-  .walletDemo { max-width: 90px; margin: 6px 0; }
 
   #toast {
     position: fixed; top: calc(12px + var(--safe-t)); left: 50%; transform: translateX(-50%); z-index: 99;
@@ -291,47 +304,50 @@
     .card:not(.big):hover { transform: translateY(-3px); }
     .chip:not(.disabled):hover { transform: translateY(-2px); }
   }
-  @media (max-width: 899px) {
-    #log li:nth-child(n+3) { display: none; }
-  }
-  @media (max-width: 370px) {
-    #topbar .title { display: none; }
-    .card .pts { font-size: 15px; min-height: 15px; }
-    .costDot { width: 15px; height: 15px; font-size: 10px; }
-    .chip { font-size: 15px; }
-    .chip .cname { display: none; }
-    .card.affordable::after { content: none; }
-  }
 
-  /* ---------- 平板 / 桌面 ---------- */
-  @media (min-width: 900px) {
-    body { font-size: 15px; }
-    #game { padding: 0 14px 40px; }
-    #topbar { padding: 10px 0; gap: 12px; }
-    #turnBanner { flex: 0 1 auto; margin-left: auto; padding: 6px 16px; font-size: 14px; }
-    #roomTag { font-size: 13px; }
-    #layout { flex-direction: row; gap: 14px; align-items: flex-start; }
-    #boardCol { display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto; min-width: 0; }
-    #sideCol { display: flex; flex-direction: column; gap: 12px; flex: 0 0 320px; position: sticky; top: 64px; }
-    #bankPanel { order: 3; } #tiersPanel { order: 4; }
-    .panel { padding: 12px; }
-    .panel h3 { font-size: 13px; margin-bottom: 8px; }
-    .noble { width: 86px; height: 86px; padding: 6px; }
-    .noble .pts { font-size: 16px; }
-    .reqBar { width: 22px; height: 18px; font-size: 12px; }
-    #bank { grid-template-columns: repeat(6, 64px); gap: 12px; }
-    .chip .cname { font-size: 10px; }
-    .tierRow { grid-template-columns: repeat(5, minmax(0, 104px)); gap: 10px; margin-bottom: 10px; }
-    .card { padding: 7px; }
-    .card .pts { font-size: 22px; min-height: 22px; }
-    .card .costs { grid-template-columns: max-content; gap: 3px; }
-    .costDot { width: 20px; height: 20px; font-size: 12px; }
-    .bonusGem { width: 22px; height: 14px; }
-    .rCard { width: 62px; }
-    .overlay { align-items: center; padding: 20px; }
-    .modal { border-radius: 14px; border-bottom: 1px solid var(--line); padding: 22px; max-height: 90vh; }
-    #takeBar .hint { flex: 1 1 auto; }
-    #takeBar button { flex: 0 0 auto; }
+  /* ---------- 手机竖屏:一屏装下,不需要上下滑动 ---------- */
+  @media (max-width: 899px) and (orientation: portrait) {
+    #game {
+      height: var(--app-h, 100vh); overflow: hidden; flex-direction: column; gap: 5px;
+      padding: calc(4px + var(--safe-t)) calc(6px + var(--safe-r)) calc(5px + var(--safe-b)) calc(6px + var(--safe-l));
+    }
+    #topbar { padding: 0; gap: 5px; flex-shrink: 0; }
+    #topbar .title { display: none; }
+    #roomTag { font-size: 12px; }
+    #turnBanner { flex: 1; margin-left: 0; padding: 3px 8px; font-size: 13px; }
+    #infoLine { margin: 0; padding: 2px 8px; min-height: 24px; font-size: 12px; border-radius: 8px; flex-shrink: 0; }
+    #layout { flex: 1; min-height: 0; flex-direction: column; align-items: stretch; gap: 5px; }
+    #boardCol, #sideCol { display: contents; }
+    #oppPanel { order: 1; } #boardPanel { order: 2; } #bankPanel { order: 3; } #myPanel { order: 4; }
+    .panel { padding: 5px 6px; border-radius: 10px; flex-shrink: 0; }
+    .panel h3 { display: none; }
+    #boardPanel { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 5px; }
+    #board { --g: 5px; flex: 1 1 0; min-height: 0; justify-content: center; align-items: center; }
+    .pHead { margin-bottom: 3px; gap: 5px; }
+    .pName { font-size: 13px; }
+    .pPts { font-size: 17px; }
+    .wallet { gap: 3px; max-width: none; }
+    .wcard { height: 15px; font-size: 11px; }
+    .wchip { width: 21px; height: 21px; font-size: 12px; }
+    .wcell { gap: 2px; }
+    .rMini { width: 28px; height: 39px; }
+    #bank { gap: 5px; max-width: none; }
+    .chip { max-width: 44px; font-size: 16px; border-width: 2px; }
+    #bank .chip .cname { display: none; }
+    .chip .selbadge { top: -5px; right: -5px; min-width: 17px; height: 17px; font-size: 11px; }
+    #takeBtns button { min-height: 38px; padding: 4px 10px; font-size: 14px; }
+    #game.roomy { gap: 7px; }
+    #game.roomy .panel { padding: 8px; }
+    #game.roomy .chip { max-width: 52px; font-size: 18px; }
+    #game.roomy .wcard { height: 19px; font-size: 12px; }
+    #game.roomy .wchip { width: 26px; height: 26px; font-size: 13px; }
+    #game.roomy .rMini { width: 32px; height: 45px; }
+    #game.roomy #infoLine { min-height: 30px; font-size: 13px; }
+    .overlay { align-items: flex-end; padding: 0; }
+    .modal {
+      border-radius: 18px 18px 0 0; border-bottom: none; max-height: 88vh; max-height: 88dvh;
+      padding: 16px calc(16px + var(--safe-r)) calc(16px + var(--safe-b)) calc(16px + var(--safe-l));
+    }
   }
 </style>
 </head>
@@ -386,29 +402,29 @@
     <button id="helpBtn" class="ghost small" aria-label="玩法说明">说明</button>
     <button id="gameLeaveBtn" class="danger small">退出</button>
   </div>
-  <div id="statusBar">
-    <div id="netWarn">⚠ 连接已断开,正在重连…</div>
-    <div id="hint"></div>
-    <ul id="log"></ul>
+  <div id="infoLine">
+    <span id="netWarn">⚠ 重连中…</span>
+    <span id="info"></span>
+    <span id="infoMore">记录 ›</span>
   </div>
   <div id="layout">
     <div id="boardCol">
-      <div class="panel" id="noblesPanel">
-        <h3><span>贵族 · 每位 +3 分</span><span class="more">数字 = 需要的卡牌加成</span></h3>
-        <div id="nobles"></div>
+      <div class="panel" id="boardPanel">
+        <h3><span>贵族(每位 +3 分)与发展卡</span><span class="more">点卡牌买 / 预定 · 点牌堆盲预定</span></h3>
+        <div id="board">
+          <div id="nobles"></div>
+          <div id="tiers"></div>
+        </div>
       </div>
       <div class="panel" id="bankPanel">
         <h3><span>宝石银行</span><span class="more">3 枚不同色 / 同色 2 枚(需剩 ≥4)</span></h3>
-        <div id="bank"></div>
-        <div id="takeBar">
-          <span class="hint" id="takeHint"></span>
-          <button id="takeConfirm">确认拿取</button>
-          <button id="takeCancel" class="ghost">清空</button>
+        <div id="bankRow">
+          <div id="bank"></div>
+          <div id="takeBtns">
+            <button id="takeConfirm">拿取</button>
+            <button id="takeCancel" class="ghost" aria-label="清空选择">✕</button>
+          </div>
         </div>
-      </div>
-      <div class="panel" id="tiersPanel">
-        <h3><span>发展卡</span><span class="more">点卡牌买 / 预定 · 点牌堆盲预定</span></h3>
-        <div id="tiers"></div>
       </div>
     </div>
     <div id="sideCol">
@@ -429,6 +445,20 @@
     <button id="mReserve" class="ghost">预定</button>
     <button id="mBuy">购买</button>
   </div>
+</div></div>
+
+<!-- 玩家详情 -->
+<div class="overlay" id="playerSheet"><div class="modal">
+  <h2 id="playerSheetTitle"></h2>
+  <div id="playerSheetBody"></div>
+  <div class="btns"><button id="playerSheetClose" class="ghost">关闭</button></div>
+</div></div>
+
+<!-- 动态记录 -->
+<div class="overlay" id="logModal"><div class="modal">
+  <h2>最近动态</h2>
+  <ul id="logList"></ul>
+  <div class="btns"><button id="logClose" class="ghost">关闭</button></div>
 </div></div>
 
 <!-- 弃宝石弹窗 -->
@@ -474,9 +504,9 @@
     <section>
       <h4>🔁 每回合只能做一件事(四选一)</h4>
       <ol>
-        <li><b>拿 3 枚不同色宝石</b>:在银行里依次点 3 种颜色,再点「确认拿取」。银行颜色不够时可以少拿。</li>
+        <li><b>拿 3 枚不同色宝石</b>:在银行里依次点 3 种颜色,再点「拿取」。银行颜色不够时可以少拿。</li>
         <li><b>拿 2 枚同色宝石</b>:同一颜色连点两下。该颜色银行里须剩 <b>≥4 枚</b>才行。</li>
-        <li><b>预定 1 张卡</b>:点桌面卡牌选「预定」,或点左侧牌堆「盲预定」(对手看不到是哪张)。同时得到 1 枚<b>黄金</b>(银行有剩时)。手里最多 3 张预定卡,以后可随时购买。</li>
+        <li><b>预定 1 张卡</b>:点桌面卡牌选「预定」,或点每行最左边的牌堆「盲预定」(对手看不到是哪张)。同时得到 1 枚<b>黄金</b>(银行有剩时)。手里最多 3 张预定卡,以后可随时购买。</li>
         <li><b>购买 1 张卡</b>:点桌面卡牌或你面板里的预定卡,选「购买」。带<b style="color:var(--ok)">绿框「可买」</b>的卡表示你现在买得起。</li>
       </ol>
     </section>
@@ -490,7 +520,7 @@
     </section>
     <section>
       <h4>👑 贵族</h4>
-      <p>贵族身上的数字是需要的<b>卡牌加成</b>数量(不是宝石)。回合结束时满足某位贵族的要求,他会自动拜访你,<b>+3 分</b>;同时满足多位时由你选一位,每回合最多一位。</p>
+      <p>贵族是紫色方块,右上角的「3」是分数,身上的数字是需要的<b>卡牌加成</b>数量(不是宝石)。回合结束时满足某位贵族的要求,他会自动拜访你,<b>+3 分</b>;同时满足多位时由你选一位,每回合最多一位。带绿框的贵族表示你已满足条件。</p>
     </section>
     <section>
       <h4>🃏 看懂界面</h4>
@@ -503,19 +533,20 @@
           <li>每行最左是牌堆:◆ 越多等级越高,卡越贵、分越高</li>
         </ul>
       </div>
-      <p>玩家面板里每种颜色有两行:上面的<b>方块</b>是卡牌加成,下面的<b>圆形</b>是持有的宝石。两者相加就是这种颜色的购买力。</p>
+      <p>手机上屏幕最上方是对手,最下方是你。每种颜色有两行:上面的<b>方块</b>是卡牌加成,下面的<b>圆形</b>是持有的宝石,两者相加就是这种颜色的购买力。右侧小卡片是预定卡。<b>点玩家面板</b>可查看完整信息(对手预定了哪些卡、拜访过的贵族等)。</p>
       <div class="colorRow" id="helpColors"></div>
     </section>
     <section>
       <h4>📱 手机使用小贴士</h4>
       <ul>
+        <li>竖屏时整局都在一屏内完成,不用上下滑动;卡牌大小会根据屏幕自动调整。</li>
+        <li>顶部第二行显示最新动态(对手刚做了什么),点它可以查看更多记录。</li>
         <li>创建房间后点「分享邀请」,把链接发给好友,对方打开后房间码会自动填好。</li>
         <li>切到其他 App、锁屏或刷新页面都没关系,回来后会自动重连并恢复对局。</li>
-        <li>顶部状态栏会显示该做什么,以及对手刚刚做了什么。</li>
         <li>轮到你时手机会轻轻振动(部分设备支持),网页标题也会提示。</li>
         <li>「退出」会暂时保留座位,之后可在首页点「继续房间」回来。</li>
         <li>邀请码创建 10 分钟内有效;对局中 10 分钟无人操作,房间会自动解散。</li>
-        <li>可在浏览器菜单里选择「添加到主屏幕」,像 App 一样全屏打开。</li>
+        <li>可在浏览器菜单里选择「添加到主屏幕」,像 App 一样全屏打开,卡牌显示得更大。</li>
       </ul>
     </section>
   </div>
@@ -541,11 +572,13 @@ let rejoinPending = false;
 let sel = {};                 // 拿宝石选择
 let discardSel = {};          // 弃宝石选择
 let modalCtx = null;          // 当前弹窗卡牌 {card, from, tier, index} | {deckOnly, tier}
-let logs = [];                // 最近动作
+let sheetSeat = -1;           // 当前打开详情的玩家座位
+let logs = [];                // 最近动作(新的在前)
 let overHidden = false;       // 结算弹窗被手动收起
 const SAVE_KEY = 'splendor_session';
 const NAME_KEY = 'splendor_name';
 const BASE_TITLE = document.title;
+const compactMQ = matchMedia('(max-width: 899px) and (orientation: portrait)');
 
 /* ---------- 连接 ---------- */
 function connect(onOpen) {
@@ -578,7 +611,7 @@ function sendAction(action) {
   if (!send({ type: 'action', action })) toast('连接已断开,正在重连,请稍后再试');
 }
 function setNet(ok) {
-  $('netWarn').style.display = ok || !S ? 'none' : 'block';
+  $('netWarn').style.display = ok || !S ? 'none' : 'inline';
 }
 function getSession() {
   try {
@@ -632,7 +665,7 @@ function renderResumeBox() {
   if (resumable) $('resumeCode').textContent = saved.room;
 }
 function showLobby() {
-  S = null; mySeat = -1; sel = {}; discardSel = {}; modalCtx = null; logs = []; overHidden = false;
+  S = null; mySeat = -1; sel = {}; discardSel = {}; modalCtx = null; sheetSeat = -1; logs = []; overHidden = false;
   closeAllModals();
   setNet(true);
   keepAwake(false);
@@ -670,7 +703,7 @@ function handle(msg) {
     const previous = S;
     S = msg.state; mySeat = S.you;
     $('lobby').style.display = 'none';
-    $('game').style.display = 'block';
+    showGame();
     $('roomTag').textContent = `房间 ${msg.room}`;
     setNet(true);
     recordActions(previous, S);
@@ -817,6 +850,9 @@ function paymentOf(card, p) {
 function gemStyle(c) {
   return `background:var(--c-${c}-bg);color:var(--c-${c}-fg)`;
 }
+function cardTint(c) {
+  return `linear-gradient(160deg, var(--c-${c}-bg) -160%, var(--panel2) 45%)`;
+}
 function pchips(obj) {
   return Object.entries(obj).filter(([, v]) => v > 0)
     .map(([c, v]) => `<span class="pchip" style="${gemStyle(c)}" title="${GEMS[c].name}">${GEMS[c].short}×${v}</span>`).join('');
@@ -824,8 +860,8 @@ function pchips(obj) {
 function gemsText(obj) {
   return Object.entries(obj).filter(([, v]) => v > 0).map(([c, v]) => `${GEMS[c].short}×${v}`).join(' ');
 }
-function playerName(seat) {
-  return seat === mySeat ? '你' : S.players[seat].name;
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
 /* ---------- 动作记录(根据前后两次状态推断) ---------- */
@@ -863,7 +899,7 @@ function recordActions(P, N) {
     if (parts.length) found.push(who + parts.join(','));
   });
   if (N.gameOver && !P.gameOver) found.push('对局结束');
-  logs = [...found.reverse(), ...logs].slice(0, 3);
+  logs = [...found.reverse(), ...logs].slice(0, 20);
 }
 
 function notifyTurn(P) {
@@ -876,54 +912,79 @@ function notifyTurn(P) {
 }
 
 /* ---------- 渲染 ---------- */
+function showGame() {
+  $('game').style.display = compactMQ.matches ? 'flex' : 'block';
+}
+
 function render() {
   if (!isMyTurn()) sel = {};
   renderTurnBanner();
-  renderStatus();
   renderNobles();
   renderBank();
   renderTiers();
-  renderPlayer($('myPanel'), me(), mySeat, true);
-  renderPlayer($('oppPanel'), opp(), 1 - mySeat, false);
+  renderPlayer($('myPanel'), mySeat);
+  renderPlayer($('oppPanel'), 1 - mySeat);
+  renderInfo();
   renderPending();
   refreshCardModal();
+  refreshPlayerSheet();
+  renderLogList();
   renderGameOver();
+  fitBoard();
 }
 
 function renderTurnBanner() {
   const b = $('turnBanner');
   if (S.gameOver) { b.textContent = '对局结束 · 查看结果'; b.className = 'over'; return; }
+  const last = S.players.some(p => p.points >= 15) ? ' · 最后一轮' : '';
+  const pend = S.pending;
   const mine = S.current === mySeat;
-  b.textContent = mine ? '★ 轮到你了' : `等待 ${opp().name} 行动…`;
+  if (pend && pend.player !== mySeat) b.textContent = pend.type === 'discard' ? '对手正在弃宝石…' : '对手正在选贵族…';
+  else b.textContent = (mine ? '★ 轮到你了' : `等待 ${opp().name}…`) + last;
   b.className = mine ? 'mine' : '';
 }
 $('turnBanner').onclick = () => {
   if (S && S.gameOver) { overHidden = false; renderGameOver(); }
 };
 
-function renderStatus() {
+// 第二行:选宝石时显示选择提示,否则显示最新动态
+function renderInfo() {
   let h;
-  const pend = S.pending;
-  if (S.gameOver) h = '对局已结束。可以再来一局,或离开房间。';
-  else if (pend && pend.player !== mySeat) h = pend.type === 'discard' ? '对手宝石超过 10 枚,正在弃宝石…' : '对手正在挑选来拜访的贵族…';
-  else if (pend) h = pend.type === 'discard' ? '你的宝石超过 10 枚,请弃掉多余的。' : '请选择一位贵族。';
-  else if (S.current === mySeat) {
-    const someAfford = [1, 2, 3].some(t => S.board[t].some(c => c && canAfford(c, me()))) ||
-      me().reserved.some(c => !c.hidden && canAfford(c, me()));
-    h = '<b>你的回合</b>:点银行里的宝石拿取,或点卡牌购买 / 预定。' +
-      (someAfford ? '带<b style="color:var(--ok)">绿框</b>的卡你买得起。' : '');
-  } else h = `等待 ${escapeHtml(opp().name)} 行动…你可以先点卡牌查看详情。`;
-  const endgame = !S.gameOver && S.players.some(p => p.points >= 15);
-  if (endgame) h += '<br><b>已有人达到 15 分,本轮结束后结算!</b>';
-  $('hint').innerHTML = h;
-  $('log').innerHTML = logs.map(l => `<li>${escapeHtml(l)}</li>`).join('');
+  const total = sum(sel);
+  if (total > 0) {
+    const distinct = Object.keys(sel).filter(k => sel[k] > 0);
+    let tip;
+    if (distinct.some(k => sel[k] === 2)) tip = '同色 2 枚';
+    else if (distinct.length === 1) tip = S.bank[distinct[0]] >= 4 ? '再点同色可拿 2 枚' : '可再选 2 种';
+    else if (distinct.length === 2) tip = '可再选 1 种';
+    else tip = '已选满';
+    const after = sum(me().tokens) + total;
+    h = `已选 ${gemsText(sel)} · ${tip}` + (after > 10 ? ` · <span class="warn">拿后 ${after} 枚需弃 ${after - 10}</span>` : '');
+  } else if (logs.length) {
+    h = `<span class="act">${escapeHtml(logs[0])}</span>`;
+  } else if (S.gameOver) {
+    h = '对局已结束';
+  } else {
+    h = S.current === mySeat ? '点宝石拿取,或点卡牌购买 / 预定' : '等待对手…可以先点卡牌查看详情';
+  }
+  $('info').innerHTML = h;
+  $('infoMore').style.display = logs.length ? '' : 'none';
 }
+$('infoLine').onclick = () => {
+  if (!logs.length) return;
+  renderLogList();
+  $('logModal').classList.add('show');
+};
+function renderLogList() {
+  $('logList').innerHTML = logs.map(l => `<li>${escapeHtml(l)}</li>`).join('');
+}
+$('logClose').onclick = () => $('logModal').classList.remove('show');
+$('logModal').addEventListener('click', e => { if (e.target.id === 'logModal') $('logModal').classList.remove('show'); });
 
 function nobleHtml(n, extra = '') {
   const reqs = Object.entries(n.req).map(([c, v]) =>
     `<div class="reqBar" style="${gemStyle(c)}">${v}</div>`).join('');
-  return `<div class="noble ${extra}"><span class="pts">3</span>
-    <div class="reqs">${reqs}</div></div>`;
+  return `<div class="noble ${extra}"><span class="pts">3</span><div class="reqs">${reqs}</div></div>`;
 }
 
 function renderNobles() {
@@ -941,24 +1002,13 @@ function renderBank() {
     const chip = document.createElement('div');
     chip.className = 'chip' + ((c === 'g' || n === 0 || !isMyTurn()) ? ' disabled' : '') + (sel[c] ? ' picked' : '');
     chip.setAttribute('style', gemStyle(c));
+    chip.title = GEMS[c].name;
     chip.innerHTML = `<span>${n}</span><span class="cname">${GEMS[c].name}</span>` +
       (sel[c] ? `<span class="selbadge">+${sel[c]}</span>` : '');
     chip.onclick = () => clickChip(c);
     el.appendChild(chip);
   }
-  const total = sum(sel);
-  $('takeBar').style.display = total > 0 ? 'flex' : 'none';
-  if (total > 0) {
-    const distinct = Object.keys(sel).filter(k => sel[k] > 0);
-    let tip;
-    if (distinct.some(k => sel[k] === 2)) tip = '同色 2 枚,可以确认了';
-    else if (distinct.length === 1) tip = S.bank[distinct[0]] >= 4 ? '再点同色可改拿 2 枚,或继续选其他颜色' : '还可再选 2 种其他颜色';
-    else if (distinct.length === 2) tip = '还可再选 1 种颜色,也可以直接确认';
-    else tip = '已选满 3 种,确认即可';
-    const after = sum(me().tokens) + total;
-    $('takeHint').innerHTML = `已选 ${pchips(sel)} · ${tip}` +
-      (after > 10 ? `<br><span class="warn">拿取后共 ${after} 枚,超过 10 枚需要弃掉 ${after - 10} 枚</span>` : '');
-  }
+  $('takeBtns').classList.toggle('show', sum(sel) > 0);
 }
 
 function clickChip(c) {
@@ -979,19 +1029,19 @@ function clickChip(c) {
     sel[c] = 1;
   }
   renderBank();
+  renderInfo();
 }
 $('takeConfirm').onclick = () => {
   sendAction({ type: 'take', gems: { ...sel } });
   sel = {};
-  renderBank();
+  renderBank(); renderInfo();
 };
-$('takeCancel').onclick = () => { sel = {}; renderBank(); };
+$('takeCancel').onclick = () => { sel = {}; renderBank(); renderInfo(); };
 
 function cardHtml(card, cls = 'card') {
   const costs = COLORS.filter(c => card.cost[c]).map(c =>
     `<div class="costDot" style="${gemStyle(c)}">${card.cost[c]}</div>`).join('');
-  const tint = `linear-gradient(160deg, var(--c-${card.bonus}-bg) -160%, var(--panel2) 45%)`;
-  return `<div class="${cls}" style="background:${tint}">
+  return `<div class="${cls}" style="background:${cardTint(card.bonus)}">
     <div class="head">
       <span class="pts">${card.points || ''}</span>
       <span class="bonusGem" style="${gemStyle(card.bonus)}"></span>
@@ -1026,6 +1076,49 @@ function renderTiers() {
   }
 }
 
+/* 手机竖屏:按剩余空间计算卡牌尺寸,保证一屏装下。
+ * 方案 A: 贵族在卡牌上方单独一行;方案 B: 贵族在卡牌右侧一列(矮屏时卡牌更大)。取卡牌更大的方案。 */
+function fitBoard() {
+  if (!S) return;
+  document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px');
+  showGame();
+  $('game').classList.toggle('roomy', compactMQ.matches && window.innerHeight / window.innerWidth > 1.9);
+  const board = $('board');
+  const nobles = [...board.querySelectorAll('#nobles .noble')];
+  if (!compactMQ.matches) {
+    board.classList.remove('side', 'tight');
+    ['--cw', '--nw', '--nh'].forEach(k => board.style.removeProperty(k));
+    nobles.forEach(n => n.classList.remove('wide'));
+    return;
+  }
+  const g = 5;
+  const W = board.clientWidth, H = board.clientHeight;
+  if (!W || !H) return;
+  // 卡宽受屏幕宽度限制时,把多出的高度留给贵族行(最高 64px)
+  const cwW = (W - 4 * g) / 5;
+  const nhA = Math.round(Math.min(64, Math.max(38, H - 3 * cwW * 1.4 - 3 * g, H * 0.12)));
+  const cwA = Math.min((H - nhA - 3 * g) / 3 / 1.4, cwW);
+  const cwB = Math.min((H - 2 * g) / 3 / 1.4, (W - 5 * g) / 5.8);
+  const side = cwB > cwA + 2;
+  const cw = Math.max(30, Math.floor(Math.min(side ? cwB : cwA, 112)));
+  board.classList.toggle('side', side);
+  board.style.setProperty('--cw', cw + 'px');
+  if (side) {
+    board.style.setProperty('--nw', Math.floor(Math.min(cw * 0.8, W - 5 * cw - 5 * g)) + 'px');
+    board.style.setProperty('--nh', Math.floor(cw * 1.4) + 'px');
+  } else {
+    board.style.setProperty('--nh', nhA + 'px');
+    board.style.setProperty('--nw', Math.floor(Math.min(nhA * 1.75, (W - 2 * g) / 3)) + 'px');
+  }
+  board.classList.toggle('tight', cw < 62);
+  nobles.forEach(n => n.classList.toggle('wide', !side));
+}
+let fitFrame = 0;
+function scheduleFit() { cancelAnimationFrame(fitFrame); fitFrame = requestAnimationFrame(fitBoard); }
+window.addEventListener('resize', scheduleFit);
+window.addEventListener('orientationchange', () => setTimeout(fitBoard, 300));
+if (window.visualViewport) visualViewport.addEventListener('resize', scheduleFit);
+
 function walletHtml(p) {
   return `<div class="wallet">${[...COLORS, 'g'].map(c => {
     const t = p.tokens[c];
@@ -1037,39 +1130,72 @@ function walletHtml(p) {
   }).join('')}</div>`;
 }
 
-function renderPlayer(el, p, seat, isMe) {
+function renderPlayer(el, seat) {
+  const p = S.players[seat], isMe = seat === mySeat;
   const active = !S.gameOver && S.current === seat;
   el.classList.toggle('active', active);
   const tokens = sum(p.tokens);
   el.innerHTML = `
     <div class="pHead">
       <span class="pName">${escapeHtml(p.name)}${isMe ? '(你)' : ''}</span>
-      ${active ? '<span class="turnDot">● 行动中</span>' : ''}
-      ${p.connected ? '' : '<span class="offline">· 已离线</span>'}
+      ${active ? '<span class="turnDot">●</span>' : ''}
+      ${p.connected ? '' : '<span class="offline">离线</span>'}
+      <span class="pStats">宝石 <span class="${tokens >= 10 ? 'full' : ''}">${tokens}/10</span> · 卡 ${p.cardCount} · 贵族 ${p.nobles.length}</span>
       <span class="pPts">${p.points}<small> 分</small></span>
     </div>
-    <div class="pStats">宝石 <span class="${tokens >= 10 ? 'full' : ''}">${tokens}/10</span> · 已购 ${p.cardCount} 张 · 贵族 ${p.nobles.length} · 预定 ${p.reserved.length}/3${isMe ? ' · <span class="legendTip">▬加成 ●宝石</span>' : ''}</div>
-    ${walletHtml(p)}
-    ${p.reserved.length ? `<div class="miniLabel">预定卡${isMe ? '(点击查看 / 购买)' : '(盲预定的卡你看不到)'}</div>` : ''}
-    <div class="reservedRow"></div>`;
+    <div class="pBody">${walletHtml(p)}<div class="reservedRow"></div></div>`;
   const rEl = el.querySelector('.reservedRow');
   p.reserved.forEach((rc, index) => {
     if (rc.hidden) {
-      rEl.insertAdjacentHTML('beforeend', `<div class="rCard hiddenCard">${rc.tier}级<br>盲预定</div>`);
+      rEl.insertAdjacentHTML('beforeend', `<div class="rMini hidden">${rc.tier}级<br>盲</div>`);
       return;
     }
     const afford = isMe && isMyTurn() && canAfford(rc, p);
-    const wrap = document.createElement('div');
-    wrap.innerHTML = cardHtml(rc, 'rCard card' + (afford ? ' affordable' : ''));
-    const cEl = wrap.firstElementChild;
-    cEl.onclick = () => openCardModal({ card: rc, from: isMe ? 'reserve' : 'oppReserve', index });
-    rEl.appendChild(cEl);
+    const mini = document.createElement('div');
+    mini.className = 'rMini' + (afford ? ' affordable' : '');
+    mini.style.background = cardTint(rc.bonus);
+    mini.innerHTML = `<span class="pts">${rc.points || ''}</span><span class="bonusGem" style="${gemStyle(rc.bonus)}"></span>`;
+    mini.onclick = e => {
+      e.stopPropagation();
+      openCardModal({ card: rc, from: isMe ? 'reserve' : 'oppReserve', index });
+    };
+    rEl.appendChild(mini);
   });
+  el.onclick = () => openPlayerSheet(seat);
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+/* ---------- 玩家详情 ---------- */
+function openPlayerSheet(seat) {
+  sheetSeat = seat;
+  refreshPlayerSheet();
+  $('playerSheet').classList.add('show');
 }
+function refreshPlayerSheet() {
+  if (sheetSeat < 0) return;
+  const seat = sheetSeat, p = S.players[seat], isMe = seat === mySeat;
+  $('playerSheetTitle').textContent = `${p.name}${isMe ? '(你)' : ''} · ${p.points} 分`;
+  const resv = p.reserved.map(rc => rc.hidden
+    ? `<div class="hiddenBig">${rc.tier} 级<br>盲预定<br>(看不到)</div>`
+    : cardHtml(rc, 'card')).join('');
+  $('playerSheetBody').innerHTML = `
+    <div class="modalSub">宝石 ${sum(p.tokens)}/10 · 已购 ${p.cardCount} 张卡 · ${p.connected ? '在线' : '已离线'}</div>
+    <div class="sheetLabel">上排方块 = 卡牌加成,下排圆形 = 宝石</div>
+    ${walletHtml(p)}
+    <div class="sheetLabel">预定卡 ${p.reserved.length}/3${isMe && p.reserved.length ? '(点卡牌可购买)' : ''}</div>
+    <div class="resvBig">${resv || '<span class="modalSub">暂无</span>'}</div>
+    <div class="sheetLabel">已拜访的贵族</div>
+    <div class="nobleRow">${p.nobles.map(n => nobleHtml(n)).join('') || '<span class="modalSub">暂无</span>'}</div>`;
+  const visible = p.reserved.map((rc, index) => ({ rc, index })).filter(x => !x.rc.hidden);
+  $('playerSheetBody').querySelectorAll('.resvBig .card').forEach((el, i) => {
+    el.onclick = () => {
+      closePlayerSheet();
+      openCardModal({ card: visible[i].rc, from: isMe ? 'reserve' : 'oppReserve', index: visible[i].index });
+    };
+  });
+}
+function closePlayerSheet() { $('playerSheet').classList.remove('show'); sheetSeat = -1; }
+$('playerSheetClose').onclick = closePlayerSheet;
+$('playerSheet').addEventListener('click', e => { if (e.target.id === 'playerSheet') closePlayerSheet(); });
 
 /* ---------- 卡牌弹窗 ---------- */
 function openCardModal(ctx) {
@@ -1080,7 +1206,7 @@ function openCardModal(ctx) {
   let note = '';
   if (ctx.deckOnly) {
     $('cardModalTitle').textContent = `盲预定 ${ctx.tier} 级牌堆顶的卡`;
-    $('modalCardView').innerHTML = `<div class="deckBack t${ctx.tier}" style="width:104px;cursor:default;flex-shrink:0">${'◆'.repeat(ctx.tier)}<span class="cnt">剩 ${S.deckCounts[ctx.tier]}</span></div>
+    $('modalCardView').innerHTML = `<div class="deckBack t${ctx.tier}" style="--cw:104px;cursor:default">${'◆'.repeat(ctx.tier)}<span class="cnt">剩 ${S.deckCounts[ctx.tier]}</span></div>
       <ul class="cardInfo">
         <li>从牌堆顶摸 1 张放进你的预定区</li>
         <li>只有你能看到是哪张卡</li>
