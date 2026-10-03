@@ -138,7 +138,8 @@ function ruleTests() {
   st = jam();
   ok(!R.hasLegalAction(st, 0), '构造出无合法操作的局面');
   ok(tryAct(st, 0, { type: 'pass' }) === null && st.current === 1 && !st.gameOver, '无合法操作时可以跳过');
-  ok(tryAct(st, 1, { type: 'pass' }) === null && st.gameOver && st.winner === 1, '双方连续跳过后按分数结算');
+  ok(tryAct(st, 1, { type: 'pass' }) === null && st.gameOver && st.winner === 1
+     && st.endReason === 'stalemate', '双方连续跳过后按分数结算并标记提前结束');
   st = jam();
   tryAct(st, 0, { type: 'pass' });
   st.bank.d = 1; // 对手有了合法操作

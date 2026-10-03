@@ -27,7 +27,7 @@ npm test                             # 端到端冒烟测试 scripts/smoke.js
    - `st.pending` 是回合内的阻塞阶段(`discard`:宝石超过 10 枚须弃;`noble`:多位贵族可选)。存在 pending 时只接受对应操作。回合顺序为 弃宝石 → 贵族 → `finishTurn`。
    - 拿不同色宝石必须拿 `min(3, 银行现有颜色种数)` 枚,不能主动少拿。
    - `buy` 可带 `pay`(实际支付的宝石)让玩家主动用黄金代替彩色宝石,由 `checkPayment` 校验;不带时用 `computePayment` 的默认方案(优先彩色宝石)。
-   - `pass` 只在 `hasLegalAction` 为假时允许;双方连续跳过(`st.passes`)说明局面冻结,直接 `endGame` 结算。
+   - `pass` 只在 `hasLegalAction` 为假时允许;双方连续跳过(`st.passes`)说明局面冻结,直接 `endGame(st, 'stalemate')` 结算;`endReason` 随视图下发,前端结算弹窗据此说明提前结束。
    - 终局:有人 ≥15 分后,轮到 `starter` 时结束(保证双方回合数相同)。平分时购卡少者胜,仍相同则 `winner = -1`。
 3. **房间管理** —— 内存中的 `rooms: Map<code, room>`,不做持久化,重启即丢失所有对局。
    - 玩家身份是加入时生成的随机 `key`;客户端把 `{room, key}` 存进 `localStorage`,用 `rejoin` 断线重连。

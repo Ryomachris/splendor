@@ -114,6 +114,7 @@ function newGame(names) {
     pending: null,        // {type:'discard',player,count} | {type:'noble',player,options}
     passes: 0,            // 连续跳过回合的次数
     gameOver: false, winner: null,
+    endReason: null,      // 'score' 正常终局 | 'stalemate' 双方都无法行动
   };
 }
 
@@ -260,7 +261,7 @@ function applyAction(st, seat, a) {
     case 'pass': {
       assert(!hasLegalAction(st, seat), '还有可执行的操作,不能跳过回合');
       // 双方连续跳过说明局面已冻结,直接按当前分数结算
-      if (++st.passes >= st.players.length) endGame(st);
+      if (++st.passes >= st.players.length) endGame(st, 'stalemate');
       else finishTurn(st);
       return;
     }
@@ -306,9 +307,10 @@ function finishTurn(st) {
 }
 
 // 结算: 高分者胜;同分时购卡少者胜;仍相同则平局
-function endGame(st) {
+function endGame(st, reason = 'score') {
   st.pending = null;
   st.gameOver = true;
+  st.endReason = reason;
   const [a, b] = st.players;
   if (a.points !== b.points) st.winner = a.points > b.points ? 0 : 1;
   else if (a.cards.length !== b.cards.length) st.winner = a.cards.length < b.cards.length ? 0 : 1;
@@ -336,7 +338,7 @@ function viewFor(room, seat) {
     deckCounts: { 1: st.decks[1].length, 2: st.decks[2].length, 3: st.decks[3].length },
     nobles: st.nobles,
     current: st.current, starter: st.starter,
-    pending: st.pending, gameOver: st.gameOver, winner: st.winner,
+    pending: st.pending, gameOver: st.gameOver, winner: st.winner, endReason: st.endReason,
     you: seat,
     canPass: seat === st.current && !st.pending && !st.gameOver && !hasLegalAction(st, seat),
     rematch: [...room.rematch],

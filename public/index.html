@@ -1026,6 +1026,7 @@ function renderGameOver() {
   $('overResult').textContent = S.winner === -1 ? '平局!' :
     (S.winner === mySeat ? '🎉 你赢了!' : `${S.players[S.winner].name} 获胜`);
   $('overDetail').innerHTML =
+    (S.endReason === 'stalemate' ? '双方都已无法行动,对局提前结束<br>' : '') +
     `${escapeHtml(a.name)} ${a.points}分(${a.cardCount}张卡) vs ${escapeHtml(b.name)} ${b.points}分(${b.cardCount}张卡)` +
     (S.rematch.length ? `<br>已有 ${S.rematch.length}/2 人同意再来一局` : '');
   $('rematchBtn').disabled = S.rematch.includes(mySeat);
