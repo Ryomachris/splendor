@@ -3,228 +3,334 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#161222">
 <title>璀璨宝石 · 双人对决</title>
 <style>
+  /* Telegram 风格 · 紫色主题 */
   :root {
-    --bg: #1a1625; --panel: #262135; --panel2: #322b45; --line: #453c60;
-    --text: #ece7f5; --dim: #9a91b5; --accent: #e8b64c;
-    --c-d-bg: #eceff1; --c-d-fg: #37474f;
-    --c-s-bg: #2f6fed; --c-s-fg: #fff;
-    --c-e-bg: #1fa055; --c-e-fg: #fff;
-    --c-r-bg: #d93a3a; --c-r-fg: #fff;
-    --c-o-bg: #2b2b33; --c-o-fg: #cfcfd8;
-    --c-g-bg: #e0a92e; --c-g-fg: #4a3400;
+    --bg: #110d1c; --panel: rgba(30, 25, 46, .86); --panel-solid: #1e192e; --panel2: #2a2340; --line: rgba(255,255,255,.07);
+    --text: #f2effa; --dim: #a39cbd; --accent: #8774e1; --accent2: #a695ff; --accent-soft: rgba(135,116,225,.16);
+    --radius: 14px; --shadow: 0 2px 10px rgba(0,0,0,.25), 0 0 0 1px var(--line);
+    --c-d-bg: linear-gradient(145deg,#ffffff,#d9dde6); --c-d-fg: #3a4250;
+    --c-s-bg: linear-gradient(145deg,#4f8dff,#1f56d6); --c-s-fg: #fff;
+    --c-e-bg: linear-gradient(145deg,#3ccf7c,#14874a); --c-e-fg: #fff;
+    --c-r-bg: linear-gradient(145deg,#ff5d6c,#c42638); --c-r-fg: #fff;
+    --c-o-bg: linear-gradient(145deg,#4a4558,#1d1a26); --c-o-fg: #e6e2f0;
+    --c-g-bg: linear-gradient(145deg,#ffd76a,#e09b16); --c-g-fg: #4a3000;
+    --t-d: #e9ecf3; --t-s: #3d7bff; --t-e: #2bb567; --t-r: #ef4555; --t-o: #6b6580;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-tap-highlight-color: transparent; }
   body {
-    background: var(--bg); color: var(--text);
-    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
-    min-height: 100vh;
+    color: var(--text); min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(135,116,225,.35), transparent 42%),
+      radial-gradient(circle at 88% 12%, rgba(196,92,214,.25), transparent 40%),
+      radial-gradient(circle at 70% 88%, rgba(84,72,200,.32), transparent 45%),
+      radial-gradient(circle at 18% 92%, rgba(170,90,220,.2), transparent 40%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' fill='none' stroke='%23ffffff' stroke-opacity='.045' stroke-width='1.5'%3E%3Cpath d='M20 14l8 8-8 8-8-8z'/%3E%3Ccircle cx='86' cy='30' r='7'/%3E%3Cpath d='M70 82l6-10h12l6 10-12 14z'/%3E%3Cpath d='M18 88l4 9 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z'/%3E%3C/svg%3E");
+    background-attachment: fixed;
   }
   button {
-    font-family: inherit; cursor: pointer; border: none; border-radius: 8px;
-    background: var(--accent); color: #2a1e05; font-weight: 700; padding: 9px 18px; font-size: 15px;
+    font-family: inherit; cursor: pointer; border: none; border-radius: 10px;
+    background: var(--accent); color: #fff; font-weight: 600; padding: 10px 18px; font-size: 15px;
+    transition: background .15s, transform .1s, box-shadow .15s;
   }
-  button:disabled { opacity: .35; cursor: not-allowed; }
-  button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
-  button.danger { background: #5c2330; color: #ffd9de; border: 1px solid #a04357; }
+  button:hover:not(:disabled) { background: var(--accent2); }
+  button:active:not(:disabled) { transform: scale(.97); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.ghost { background: var(--accent-soft); color: var(--accent2); }
+  button.ghost:hover:not(:disabled) { background: rgba(135,116,225,.26); }
+  button.danger { background: rgba(255,89,90,.12); color: #ff7a85; }
+  button.danger:hover:not(:disabled) { background: rgba(255,89,90,.22); }
   input {
-    font-family: inherit; font-size: 16px; padding: 10px 12px; border-radius: 8px;
-    border: 1px solid var(--line); background: var(--panel2); color: var(--text); outline: none; width: 100%;
+    font-family: inherit; font-size: 16px; padding: 12px 14px; border-radius: 10px;
+    border: 1.5px solid rgba(255,255,255,.1); background: rgba(0,0,0,.18); color: var(--text); outline: none; width: 100%;
+    transition: border-color .15s;
   }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: #7a7393; }
 
   /* ---------- 大厅 ---------- */
-  #lobby { max-width: 420px; margin: 0 auto; padding: 48px 20px; }
-  #lobby h1 { text-align: center; font-size: 34px; letter-spacing: 6px; color: var(--accent); margin-bottom: 6px; }
-  #lobby .sub { text-align: center; color: var(--dim); margin-bottom: 36px; }
-  #lobby .box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; margin-bottom: 18px; }
-  #lobby label { display: block; color: var(--dim); font-size: 13px; margin: 0 0 6px; }
+  #lobby { max-width: 400px; margin: 0 auto; padding: 56px 20px 40px; }
+  #lobby .logo {
+    width: 104px; height: 104px; margin: 0 auto 20px; border-radius: 50%;
+    background: linear-gradient(135deg,#a695ff,#7458e6 55%,#c05cd6);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 30px rgba(135,116,225,.45);
+  }
+  #lobby .logo svg { width: 54px; height: 54px; }
+  #lobby h1 { text-align: center; font-size: 30px; font-weight: 700; letter-spacing: 4px; margin-bottom: 6px; }
+  #lobby .sub { text-align: center; color: var(--dim); margin-bottom: 32px; font-size: 15px; }
+  #lobby .box {
+    background: var(--panel); border-radius: 18px; padding: 22px; margin-bottom: 16px;
+    box-shadow: var(--shadow); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  }
+  #lobby label { display: block; color: var(--accent2); font-size: 13px; font-weight: 600; margin: 0 0 8px; }
   #lobby .row { display: flex; gap: 10px; margin-top: 14px; }
+  #lobby .row button { padding: 12px 18px; }
   #lobby .row input { text-transform: uppercase; letter-spacing: 3px; }
+  #lobby .divider { display: flex; align-items: center; gap: 10px; color: #6f6889; font-size: 12px; margin-top: 18px; }
+  #lobby .divider::before, #lobby .divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.08); }
   #waitBox { text-align: center; }
-  #waitCode { font-size: 44px; letter-spacing: 10px; color: var(--accent); font-weight: 800; margin: 12px 0; }
-  #resumeCode { color: var(--accent); font-weight: 800; letter-spacing: 3px; }
+  #waitCode {
+    font-size: 42px; letter-spacing: 12px; padding-left: 12px; font-weight: 800; margin: 14px auto;
+    background: var(--accent-soft); color: var(--accent2); border-radius: 14px; display: inline-block; padding: 8px 10px 8px 22px;
+  }
+  #resumeCode { color: var(--accent2); font-weight: 700; letter-spacing: 3px; }
 
   /* ---------- 游戏 ---------- */
-  #game { display: none; max-width: 1180px; margin: 0 auto; padding: 12px 14px 40px; }
-  #topbar { display: flex; align-items: center; gap: 14px; padding: 6px 0 12px; flex-wrap: wrap; }
-  #topbar .title { font-weight: 800; color: var(--accent); letter-spacing: 3px; }
+  #game { display: none; max-width: 1180px; margin: 0 auto; padding: 0 14px 40px; }
+  #topbar {
+    display: flex; align-items: center; gap: 12px; padding: 10px 16px; margin: 0 -14px 14px; flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(22,18,34,.82); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--line);
+  }
+  #topbar .title { font-weight: 700; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+  #topbar .title::before {
+    content: ''; width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg,#a695ff,#7458e6 55%,#c05cd6);
+  }
   #roomTag { color: var(--dim); font-size: 13px; }
-  #turnBanner { margin-left: auto; padding: 6px 16px; border-radius: 20px; font-weight: 700; font-size: 14px;
-    background: var(--panel2); border: 1px solid var(--line); }
-  #turnBanner.mine { background: #2c4a1f; border-color: #62a943; color: #cdf3b3; }
+  #turnBanner { margin-left: auto; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 14px;
+    background: rgba(255,255,255,.06); color: var(--dim); }
+  #turnBanner.mine { background: var(--accent); color: #fff; box-shadow: 0 4px 14px rgba(135,116,225,.5); animation: pulse 2s infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 4px 22px rgba(135,116,225,.85); } }
   #gameLeaveBtn { padding: 6px 12px; font-size: 13px; }
 
   #layout { display: flex; gap: 14px; align-items: flex-start; }
   #boardCol { flex: 1 1 auto; min-width: 0; }
-  #sideCol { flex: 0 0 300px; display: flex; flex-direction: column; gap: 12px; }
+  #sideCol { flex: 0 0 300px; display: flex; flex-direction: column; gap: 12px; position: sticky; top: 70px; }
   @media (max-width: 900px) {
-    #layout { flex-direction: column; }
-    #sideCol { flex: 1 1 auto; width: 100%; flex-direction: row; flex-wrap: wrap; order: -1; }
+    #layout { flex-direction: column; align-items: stretch; }
+    #sideCol { position: static; flex: 1 1 auto; width: 100%; flex-direction: row; flex-wrap: wrap; order: -1; }
     #sideCol > .pPanel { flex: 1 1 calc(50% - 6px); min-width: 0; }
   }
-  @media (max-width: 550px) {
-    #game { padding: 2px 2px 3px; }
-    #topbar { padding: 1px 0 3px; gap: 3px; font-size: 11px; }
-    #topbar .title { font-size: 12px; letter-spacing: 0; }
-    #roomTag { font-size: 10px; }
-    #turnBanner { font-size: 10px; padding: 2px 8px; }
-    #gameLeaveBtn { font-size: 10px; padding: 2px 7px; }
-    #layout { gap: 2px; }
-    #sideCol { gap: 2px; }
-    #sideCol > .pPanel { flex: 1 1 calc(50% - 1px); }
-    .panel { padding: 3px 4px; }
-    .panel h3 { font-size: 9px; margin-bottom: 2px; letter-spacing: 0; }
-    #nobles { gap: 2px; margin-bottom: 2px; }
-    .noble { width: 40px; height: 40px; padding: 2px; }
-    .noble .pts { font-size: 10px; top: 2px; right: 4px; }
-    .noble .reqs { gap: 1px; bottom: 2px; left: 2px; }
-    #bank { gap: 2px; margin-bottom: 2px; }
-    .chip { width: 32px; height: 32px; font-size: 11px; border-width: 2px; }
-    .chip .cname { font-size: 7px; }
-    .chip .selbadge { width: 13px; height: 13px; font-size: 8px; top: -4px; right: -4px; }
-    #takeBar { gap: 2px; margin-bottom: 2px; }
-    #takeBar .hint { font-size: 10px; }
-    #takeBar button { font-size: 11px; padding: 4px 8px; }
-    .tierRow { gap: 2px; margin-bottom: 2px; }
-    .cardSlots { gap: 2px; }
-    .card { width: 52px; min-height: 72px; padding: 2px; }
-    .card .pts { font-size: 12px; min-height: 14px; }
-    .card .head { gap: 0; }
-    .bonusGem { width: 12px; height: 7px; }
-    .costDot { width: 12px; height: 12px; font-size: 8px; }
-    .deckBack { width: 52px; min-height: 72px; }
-    .deckBack .cnt { font-size: 8px; }
-    .pPanel .pHead { gap: 2px; margin-bottom: 1px; }
-    .pPanel .pName { font-size: 11px; }
-    .pPanel .pPts { font-size: 13px; }
-    .pPanel .offline { font-size: 9px; }
-    .assetRow { gap: 2px; margin-bottom: 1px; }
-    .asset { font-size: 9px; padding: 1px 4px; }
-    .asset .b { font-size: 8px; }
-    .miniLabel { font-size: 9px; margin: 2px 0 1px; }
-    .nobleMini { width: 16px; height: 16px; font-size: 9px; display: inline-flex !important; }
-    .reservedRow { gap: 2px; }
-    .rCard { width: 34px; height: 48px; padding: 2px; font-size: 8px; }
-    .rCard .pts { font-size: 9px; }
-    .rCard .costs { gap: 1px; }
-    .rCard .costDot { width: 10px; height: 10px; font-size: 7px; }
-    .rCard .bonusGem { top: 1px; right: 1px; width: 10px; height: 6px; }
-    .overlay { padding: 5px; }
-    .modal { padding: 8px; }
-    .modal h2 { font-size: 13px; margin-bottom: 6px; }
-    .modal .btns { margin-top: 6px; gap: 4px; }
-    .modal .btns button { font-size: 12px; padding: 5px 8px; }
-    #modalCardView { gap: 6px; }
-    #modalCardView .card { width: 60px; min-height: 84px; }
+  .panel {
+    background: var(--panel); border-radius: var(--radius); padding: 14px;
+    box-shadow: var(--shadow); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   }
-
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
-  .panel h3 { font-size: 13px; color: var(--dim); font-weight: 600; margin-bottom: 8px; letter-spacing: 1px; }
+  .panel h3 { font-size: 13px; color: var(--accent2); font-weight: 600; margin-bottom: 10px; }
 
   /* 贵族 */
-  #nobles { display: flex; gap: 10px; margin-bottom: 12px; }
+  #nobles { display: flex; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
   .noble {
-    width: 86px; height: 86px; border-radius: 10px; background: linear-gradient(145deg,#4a3f66,#332b49);
-    border: 1px solid #6b5c96; padding: 6px; position: relative; flex-shrink: 0;
+    width: 86px; height: 86px; border-radius: 14px; padding: 6px; position: relative; flex-shrink: 0;
+    background: linear-gradient(150deg,#5b49b8,#352a6e 70%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 4px 12px rgba(0,0,0,.3);
   }
-  .noble.selectable { cursor: pointer; box-shadow: 0 0 0 2px var(--accent); }
-  .noble .pts { position: absolute; top: 4px; right: 8px; font-weight: 800; color: var(--accent); }
+  .noble::after { content: '♛'; position: absolute; right: 8px; bottom: 4px; font-size: 26px; color: rgba(255,255,255,.12); }
+  .noble.selectable { cursor: pointer; box-shadow: 0 0 0 2px var(--accent2), 0 6px 18px rgba(135,116,225,.5); }
+  @media (hover: hover) { .noble.selectable:hover { transform: translateY(-2px); } }
+  .noble .pts { position: absolute; top: 4px; right: 8px; font-weight: 800; color: #fff; }
   .noble .reqs { position: absolute; bottom: 6px; left: 6px; display: flex; flex-direction: column; gap: 2px; }
 
   /* 宝石银行 */
-  #bank { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  #bank { display: flex; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
   .chip {
     width: 58px; height: 58px; border-radius: 50%; display: flex; flex-direction: column;
     align-items: center; justify-content: center; font-weight: 800; font-size: 18px;
-    border: 3px solid rgba(255,255,255,.25); cursor: pointer; user-select: none; position: relative;
-    transition: transform .08s;
+    border: 3px solid rgba(255,255,255,.28); cursor: pointer; user-select: none; position: relative;
+    box-shadow: inset 0 -3px 6px rgba(0,0,0,.25), inset 0 3px 6px rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.35);
+    transition: transform .12s, box-shadow .12s;
   }
-  .chip:hover { transform: translateY(-2px); }
-  .chip.disabled { opacity: .35; cursor: not-allowed; }
+  @media (hover: hover) { .chip:hover { transform: translateY(-3px); } }
+  .chip.disabled { opacity: .4; cursor: not-allowed; }
+  .chip.disabled:hover { transform: none; }
   .chip .cname { font-size: 10px; font-weight: 600; opacity: .85; }
   .chip .selbadge {
-    position: absolute; top: -6px; right: -6px; background: var(--accent); color: #2a1e05;
-    width: 22px; height: 22px; border-radius: 50%; font-size: 13px; display: flex; align-items: center; justify-content: center;
+    position: absolute; top: -6px; right: -6px; background: var(--accent); color: #fff;
+    width: 22px; height: 22px; border-radius: 50%; font-size: 12px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 2px var(--panel-solid);
   }
-  #takeBar { display: none; align-items: center; gap: 10px; margin-bottom: 12px; }
-  #takeBar .hint { color: var(--dim); font-size: 13px; }
+  #takeBar { display: none; align-items: center; gap: 10px; margin: 12px 0 4px; flex-wrap: wrap;
+    background: var(--accent-soft); border-radius: 12px; padding: 8px 10px; }
+  #takeBar .hint { color: var(--text); font-size: 13px; margin-right: auto; }
 
   /* 卡牌 */
   .tierRow { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
+  .tierRow:last-child { margin-bottom: 0; }
   .deckBack {
-    width: 92px; min-height: 128px; border-radius: 10px; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 4px; font-weight: 800; cursor: pointer;
-    border: 2px dashed rgba(255,255,255,.3); flex-shrink: 0;
+    width: 92px; min-height: 128px; border-radius: 12px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px; font-weight: 800; cursor: pointer;
+    flex-shrink: 0; color: rgba(255,255,255,.9); position: relative; overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), 0 4px 12px rgba(0,0,0,.3);
+    transition: transform .12s;
   }
-  .deckBack.t1 { background: #274b31; } .deckBack.t2 { background: #52432a; } .deckBack.t3 { background: #2a3a5c; }
-  .deckBack .cnt { font-size: 13px; color: var(--dim); font-weight: 600; }
-  .deckBack.empty { opacity: .3; cursor: default; }
+  .deckBack::before { content: ''; position: absolute; inset: 6px; border-radius: 8px; border: 1.5px dashed rgba(255,255,255,.2); }
+  @media (hover: hover) { .deckBack:hover { transform: translateY(-3px); } }
+  .deckBack.t1 { background: linear-gradient(160deg,#6d5ad8,#3f3291); }
+  .deckBack.t2 { background: linear-gradient(160deg,#a457d6,#5a2a8a); }
+  .deckBack.t3 { background: linear-gradient(160deg,#d65ca8,#7a2a63); }
+  .deckBack .gems { letter-spacing: 2px; }
+  .deckBack .cnt { font-size: 12px; color: rgba(255,255,255,.7); font-weight: 600; }
+  .deckBack.empty { opacity: .25; cursor: default; }
   .cardSlots { display: flex; gap: 10px; flex: 1; }
   .card {
-    width: 92px; min-height: 128px; border-radius: 10px; padding: 7px; position: relative;
-    cursor: pointer; border: 1px solid rgba(255,255,255,.18); flex-shrink: 0;
-    display: flex; flex-direction: column; transition: transform .08s;
+    width: 92px; min-height: 128px; border-radius: 12px; padding: 8px; position: relative;
+    cursor: pointer; flex-shrink: 0; background: var(--panel2);
+    display: flex; flex-direction: column; transition: transform .12s, box-shadow .12s;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 4px 12px rgba(0,0,0,.3);
   }
-  .card:hover { transform: translateY(-3px); }
+  @media (hover: hover) { .card:hover { transform: translateY(-4px); } }
   .card.empty { visibility: hidden; }
   .card .head { display: flex; justify-content: space-between; align-items: center; }
-  .card .pts { font-size: 20px; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,.6); min-height: 24px; }
+  .card .pts { font-size: 22px; font-weight: 800; text-shadow: 0 1px 4px rgba(0,0,0,.6); min-height: 24px; color: #fff; }
   .card .costs { margin-top: auto; display: flex; flex-direction: column; gap: 3px; }
   .costDot {
     width: 20px; height: 20px; border-radius: 50%; font-size: 12px; font-weight: 800;
-    display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.4);
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 1.5px rgba(255,255,255,.35), 0 1px 3px rgba(0,0,0,.4);
   }
-  .bonusGem { width: 22px; height: 14px; border-radius: 4px; border: 1px solid rgba(255,255,255,.5); }
-  .card.affordable { box-shadow: 0 0 0 2px #7ddf64; }
+  .bonusGem { width: 20px; height: 20px; transform: rotate(45deg) scale(.8); border-radius: 4px; box-shadow: 0 0 0 1.5px rgba(255,255,255,.5), 0 2px 6px rgba(0,0,0,.4); }
+  .card.affordable { box-shadow: 0 0 0 2px var(--accent2), 0 6px 18px rgba(135,116,225,.45); }
+  .card.affordable::after {
+    content: '可购买'; position: absolute; bottom: 6px; right: 6px; font-size: 10px; font-weight: 700;
+    background: var(--accent); color: #fff; padding: 1px 6px; border-radius: 8px;
+  }
 
   /* 玩家面板 */
-  .pPanel.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-  .pPanel .pHead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-  .pPanel .pName { font-weight: 700; }
-  .pPanel .pPts { margin-left: auto; font-size: 20px; font-weight: 800; color: var(--accent); }
-  .pPanel .offline { color: #e07777; font-size: 12px; }
-  .assetRow { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .pPanel { transition: box-shadow .2s; }
+  .pPanel.active { box-shadow: 0 0 0 2px var(--accent), 0 8px 24px rgba(135,116,225,.3); }
+  .pPanel .pHead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .pPanel .avatar {
+    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 18px; color: #fff; position: relative;
+  }
+  .pPanel .avatar.a0 { background: linear-gradient(135deg,#a695ff,#7458e6); }
+  .pPanel .avatar.a1 { background: linear-gradient(135deg,#ff9ad5,#c05cd6); }
+  .pPanel .avatar.online::after {
+    content: ''; position: absolute; right: 0; bottom: 0; width: 25%; height: 25%; border-radius: 50%;
+    background: #4fce5d; box-shadow: 0 0 0 2px var(--panel-solid);
+  }
+  .pPanel .pMeta { min-width: 0; display: flex; flex-direction: column; }
+  .pPanel .pName { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pPanel .pStatus { font-size: 12px; color: var(--dim); }
+  .pPanel .pStatus.on { color: var(--accent2); }
+  .pPanel .offline { color: #ff7a85; }
+  .pPanel .pPts { margin-left: auto; font-size: 15px; font-weight: 700; color: #fff; background: var(--accent);
+    padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
+  .assetRow { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 4px; }
   .asset {
-    display: flex; align-items: center; gap: 3px; border-radius: 6px; padding: 2px 7px;
-    font-size: 13px; font-weight: 700; border: 1px solid rgba(255,255,255,.2);
+    display: flex; align-items: center; gap: 3px; border-radius: 8px; padding: 2px 8px;
+    font-size: 13px; font-weight: 700; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
   }
   .asset .b { font-size: 11px; opacity: .85; font-weight: 600; }
-  .miniLabel { font-size: 11px; color: var(--dim); margin: 6px 0 4px; }
+  .miniLabel { font-size: 11px; color: var(--dim); margin: 8px 0 4px; }
   .reservedRow { display: flex; gap: 6px; }
   .rCard {
-    width: 62px; height: 86px; border-radius: 8px; padding: 5px; font-size: 11px; cursor: pointer;
-    border: 1px solid rgba(255,255,255,.25); position: relative; display: flex; flex-direction: column;
+    width: 62px; height: 86px; border-radius: 9px; padding: 5px; font-size: 11px; cursor: pointer;
+    position: relative; display: flex; flex-direction: column;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), 0 2px 8px rgba(0,0,0,.3);
   }
   .rCard .pts { font-weight: 800; font-size: 14px; }
   .rCard .costs { margin-top: auto; display: flex; flex-wrap: wrap; gap: 2px; }
   .rCard .costDot { width: 15px; height: 15px; font-size: 10px; }
-  .rCard .bonusGem { position: absolute; top: 2px; right: 2px; width: 18px; height: 11px; }
-  .rCard.hiddenCard { background: repeating-linear-gradient(45deg,#3a3352,#3a3352 6px,#332b49 6px,#332b49 12px);
-    align-items: center; justify-content: center; cursor: default; color: var(--dim); }
-  .nobleMini { width: 30px; height: 30px; border-radius: 6px; background: #4a3f66; display: inline-flex;
-    align-items: center; justify-content: center; font-size: 14px; border: 1px solid #6b5c96; }
+  .rCard .bonusGem { position: absolute; top: 4px; right: 4px; width: 13px; height: 13px; }
+  .rCard.hiddenCard { background: repeating-linear-gradient(45deg,#3a2f63,#3a2f63 6px,#2e2550 6px,#2e2550 12px);
+    align-items: center; justify-content: center; text-align: center; cursor: default; color: var(--dim); }
+  .nobleMini { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(150deg,#5b49b8,#352a6e);
+    display: inline-flex; align-items: center; justify-content: center; font-size: 14px; color: rgba(255,255,255,.6); }
+  .nobleMini::before { content: '♛'; }
 
   /* 弹窗 */
   .overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65);
+    display: none; position: fixed; inset: 0; background: rgba(8,5,16,.6);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
     align-items: center; justify-content: center; z-index: 50; padding: 20px;
   }
-  .overlay.show { display: flex; }
-  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; max-width: 440px; width: 100%; }
-  .modal h2 { font-size: 18px; margin-bottom: 14px; }
-  .modal .btns { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+  .overlay.show { display: flex; animation: fadeIn .15s; }
+  .overlay.show .modal { animation: popIn .2s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes fadeIn { from { opacity: 0; } }
+  @keyframes popIn { from { transform: scale(.92); opacity: 0; } }
+  .modal { background: var(--panel-solid); border-radius: 18px; padding: 22px; max-width: 440px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5), 0 0 0 1px var(--line); }
+  .modal h2 { font-size: 18px; font-weight: 600; margin-bottom: 14px; }
+  .modal .btns { display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end; flex-wrap: wrap; }
   #modalCardView { display: flex; gap: 16px; align-items: flex-start; }
-  #payPreview { font-size: 13px; color: var(--dim); margin-top: 10px; line-height: 1.8; }
+  #payPreview { font-size: 13px; color: var(--dim); margin-top: 12px; line-height: 1.8;
+    background: rgba(255,255,255,.04); border-radius: 10px; padding: 6px 12px; }
+  #payPreview:empty { display: none; }
   #discardChips, #nobleChoices { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 
   #toast {
-    position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 99;
-    background: #5c2330; color: #ffd9de; border: 1px solid #a04357; padding: 10px 20px;
-    border-radius: 10px; font-size: 14px; display: none;
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 99;
+    background: rgba(40,33,60,.95); color: #fff; padding: 11px 20px; max-width: calc(100% - 32px);
+    border-radius: 12px; font-size: 14px; display: none; box-shadow: 0 8px 30px rgba(0,0,0,.45);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-left: 3px solid var(--accent);
   }
-  #overModal .result { font-size: 26px; font-weight: 800; text-align: center; margin: 10px 0 4px; color: var(--accent); }
-  #overModal .detail { text-align: center; color: var(--dim); }
+  #overModal .result { font-size: 28px; font-weight: 800; text-align: center; margin: 10px 0 6px;
+    background: linear-gradient(90deg,#a695ff,#ff9ad5); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #overModal .detail { text-align: center; color: var(--dim); line-height: 1.7; }
+
+  /* 手机竖屏紧凑布局:放在最后,覆盖上面的基础样式 */
+  @media (max-width: 550px) {
+    #game { padding: 0 4px 4px; }
+    #topbar { padding: 5px 8px; margin: 0 -4px 4px; gap: 5px; font-size: 11px; flex-wrap: nowrap; }
+    #roomTag { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #turnBanner { margin-left: 0; white-space: nowrap; }
+    #gameLeaveBtn { white-space: nowrap; }
+    #topbar .title { white-space: nowrap; }
+    .card.affordable::after { display: none; }
+    #topbar .title { font-size: 13px; gap: 5px; }
+    #topbar .title::before { width: 20px; height: 20px; }
+    #roomTag { font-size: 10px; }
+    #turnBanner { font-size: 10px; padding: 3px 9px; }
+    #gameLeaveBtn { font-size: 10px; padding: 3px 8px; border-radius: 8px; }
+    #layout { gap: 4px; }
+    #sideCol { gap: 4px; }
+    #sideCol > .pPanel { flex: 1 1 calc(50% - 2px); }
+    .panel { padding: 5px 6px; border-radius: 10px; }
+    .panel h3 { font-size: 9px; margin-bottom: 3px; letter-spacing: 0; }
+    #nobles { gap: 3px; margin-bottom: 2px; }
+    .noble { width: 40px; height: 40px; padding: 2px; border-radius: 8px; }
+    .noble .pts { font-size: 10px; top: 2px; right: 4px; }
+    .noble .reqs { gap: 1px; bottom: 2px; left: 2px; }
+    #bank { gap: 3px; margin-bottom: 2px; }
+    .chip { width: 34px; height: 34px; font-size: 11px; border-width: 2px; }
+    .chip .cname { font-size: 7px; }
+    .chip .selbadge { width: 14px; height: 14px; font-size: 8px; top: -4px; right: -4px; }
+    #takeBar { gap: 3px; margin-bottom: 2px; }
+    #takeBar .hint { font-size: 10px; }
+    #takeBar button { font-size: 11px; padding: 4px 8px; border-radius: 8px; }
+    .tierRow { gap: 3px; margin-bottom: 3px; }
+    .cardSlots { gap: 3px; }
+    .card { width: 52px; min-height: 72px; padding: 3px; border-radius: 7px; }
+    .tierRow .card, .tierRow .deckBack { flex: 1 1 0; width: auto; min-width: 0; max-width: 72px; }
+    .card .pts { font-size: 12px; min-height: 14px; }
+    .card .head { gap: 0; }
+    .bonusGem { width: 11px; height: 11px; }
+    .costDot { width: 12px; height: 12px; font-size: 8px; }
+    .deckBack { width: 52px; min-height: 72px; border-radius: 7px; }
+    .deckBack .gems { font-size: 10px; }
+    .deckBack .cnt { font-size: 8px; }
+    .pPanel .pHead { gap: 4px; margin-bottom: 2px; }
+    .pPanel .avatar { width: 22px; height: 22px; font-size: 11px; }
+    .pPanel .pName { font-size: 11px; }
+    .pPanel .pStatus { font-size: 8px; }
+    .pPanel .pPts { font-size: 11px; padding: 1px 6px; }
+    .assetRow { gap: 2px; margin-bottom: 1px; }
+    .asset { font-size: 9px; padding: 1px 4px; border-radius: 5px; }
+    .asset .b { font-size: 8px; }
+    .miniLabel { font-size: 9px; margin: 2px 0 1px; }
+    .nobleMini { width: 16px; height: 16px; font-size: 9px; display: inline-flex !important; border-radius: 4px; }
+    .reservedRow { gap: 2px; }
+    .rCard { width: 34px; height: 48px; padding: 2px; font-size: 8px; border-radius: 5px; }
+    .rCard .pts { font-size: 9px; }
+    .rCard .costs { gap: 1px; }
+    .rCard .costDot { width: 10px; height: 10px; font-size: 7px; }
+    .rCard .bonusGem { top: 2px; right: 2px; width: 8px; height: 8px; }
+    .overlay { padding: 10px; }
+    .modal { padding: 14px; border-radius: 14px; }
+    .modal h2 { font-size: 14px; margin-bottom: 8px; }
+    .modal .btns { margin-top: 10px; gap: 4px; }
+    .modal .btns button { font-size: 13px; padding: 7px 10px; }
+    #modalCardView { gap: 8px; }
+    #modalCardView .card { width: 64px; min-height: 88px; }
+  }
+
 </style>
 </head>
 <body>
@@ -233,6 +339,7 @@
 
 <!-- ============ 大厅 ============ -->
 <div id="lobby">
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M9 3l3 18 3-18M6 3l3 6 3-6 3 6 3-6" stroke-opacity=".7"/></svg></div>
   <h1>璀璨宝石</h1>
   <div class="sub">Splendor · 双人在线对决</div>
   <div class="box" id="resumeBox" style="display:none">
@@ -243,6 +350,7 @@
     <label>你的昵称</label>
     <input id="nameInput" maxlength="12" placeholder="输入昵称">
     <div class="row"><button id="createBtn" style="flex:1">创建房间</button></div>
+    <div class="divider">或加入好友的房间</div>
     <div class="row">
       <input id="codeInput" maxlength="4" placeholder="房间码">
       <button id="joinBtn" class="ghost" style="flex-shrink:0">加入房间</button>
@@ -610,7 +718,7 @@ $('takeCancel').onclick = () => { sel = {}; renderBank(); };
 function cardHtml(card, cls = 'card') {
   const costs = COLORS.filter(c => card.cost[c]).map(c =>
     `<div class="costDot" style="${gemStyle(c)}">${card.cost[c]}</div>`).join('');
-  const tint = `linear-gradient(160deg, var(--c-${card.bonus}-bg) -160%, var(--panel2) 45%)`;
+  const tint = `linear-gradient(165deg, color-mix(in srgb, var(--t-${card.bonus}) 55%, transparent) 0%, color-mix(in srgb, var(--t-${card.bonus}) 14%, var(--panel2)) 50%, var(--panel2) 100%)`;
   return `<div class="${cls}" style="background:${tint}">
     <div class="head">
       <span class="pts">${card.points || ''}</span>
@@ -629,7 +737,7 @@ function renderTiers() {
     const cnt = S.deckCounts[tier];
     const deck = document.createElement('div');
     deck.className = `deckBack t${tier}` + (cnt === 0 ? ' empty' : '');
-    deck.innerHTML = `<span>${'◆'.repeat(tier)}</span><span class="cnt">剩 ${cnt} 张</span>`;
+    deck.innerHTML = `<span class="gems">${'◆'.repeat(tier)}</span><span class="cnt">剩 ${cnt} 张</span>`;
     if (cnt > 0) deck.onclick = () => openCardModal({ deckOnly: true, tier });
     row.appendChild(deck);
     const slots = document.createElement('div');
@@ -657,9 +765,13 @@ function renderPlayer(el, p, seat, isMe) {
   const nobleRow = p.nobles.map(() => '<span class="nobleMini"></span>').join('');
   el.innerHTML = `
     <div class="pHead">
-      <span class="pName">${escapeHtml(p.name)}${isMe ? '(你)' : ''}</span>
-      ${p.connected ? '' : '<span class="offline">· 已离线</span>'}
-      <span class="pPts">${p.points}分</span>
+      <span class="avatar a${seat}${p.connected ? ' online' : ''}">${escapeHtml(Array.from(p.name)[0] || '?')}</span>
+      <span class="pMeta">
+        <span class="pName">${escapeHtml(p.name)}${isMe ? '(你)' : ''}</span>
+        ${!p.connected ? '<span class="pStatus offline">已离线</span>'
+          : (!S.gameOver && S.current === seat ? '<span class="pStatus on">正在行动…</span>' : '<span class="pStatus">在线</span>')}
+      </span>
+      <span class="pPts">${p.points} 分</span>
     </div>
     <div class="miniLabel">宝石(共 ${sum(p.tokens)}/10)</div>
     <div class="assetRow">${tokenRow}</div>
