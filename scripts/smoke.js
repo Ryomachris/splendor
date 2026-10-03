@@ -46,6 +46,106 @@ function canAfford(card, p) {
 }
 const total = t => Object.values(t).reduce((a, b) => a + b, 0);
 
+/* 规则引擎单元测试: 直接构造局面,覆盖随机对局难以触发的规则分支 */
+function ruleTests() {
+  const R = require('../server.js');
+  const { applyAction, ActionError } = R;
+  const C5 = ['d', 's', 'e', 'r', 'o'];
+  const zero = () => ({ d: 0, s: 0, e: 0, r: 0, o: 0 });
+  // 执行操作,返回错误信息(成功返回 null);非 ActionError 视为服务器内部错误
+  const tryAct = (st, seat, a) => {
+    try { applyAction(st, seat, a); return null; }
+    catch (e) { return e instanceof ActionError ? e.message : 'INTERNAL: ' + e.message; }
+  };
+  const fresh = () => { const st = R.newGame(['甲', '乙']); st.current = st.starter = 0; return st; };
+
+  console.log('规则单元测试');
+  // 牌库: 每级各颜色卡数相同,所有卡费用中各颜色出现总数相同(官方牌库的对称性)
+  for (const t of [1, 2, 3]) {
+    const cards = R.ALL_CARDS.filter(c => c.tier === t);
+    const cnt = zero(), cost = zero();
+    for (const c of cards) { cnt[c.bonus]++; for (const k in c.cost) cost[k] += c.cost[k]; }
+    ok(new Set(Object.values(cnt)).size === 1 && new Set(Object.values(cost)).size === 1,
+       `${t} 级牌库各颜色对称`);
+  }
+  ok(R.ALL_CARDS.some(c => c.tier === 1 && c.bonus === 'r' && c.cost.d === 2 && c.cost.r === 2 && !c.cost.o),
+     '一级红宝石卡费用为 2 钻石 + 2 红宝石');
+
+  // 拿宝石: 银行有 ≥3 种颜色时必须拿满 3 种
+  let st = fresh();
+  ok(/必须拿 3 枚/.test(tryAct(st, 0, { type: 'take', gems: { d: 1, s: 1 } })), '有 5 种颜色时拿 2 种被拒');
+  ok(/必须拿 3 枚/.test(tryAct(st, 0, { type: 'take', gems: { d: 1 } })), '有 5 种颜色时拿 1 种被拒');
+  ok(tryAct(st, 0, { type: 'take', gems: { d: 1, s: 1, e: 1 } }) === null, '拿 3 种不同色成功');
+  st = fresh();
+  Object.assign(st.bank, { d: 0, s: 0, e: 0, r: 2, o: 1 });
+  ok(/只剩 2 种/.test(tryAct(st, 0, { type: 'take', gems: { r: 1 } })), '银行只剩 2 种时拿 1 种被拒');
+  ok(tryAct(st, 0, { type: 'take', gems: { r: 1, o: 1 } }) === null, '银行只剩 2 种时可以拿 2 种');
+  st = fresh();
+  Object.assign(st.bank, { d: 0, s: 0, e: 0, r: 0, o: 1 });
+  ok(tryAct(st, 0, { type: 'take', gems: { o: 1 } }) === null, '银行只剩 1 种时可以拿 1 枚');
+
+  // 购卡: 自选黄金替代
+  const card = { id: 9001, tier: 1, bonus: 'd', points: 0, cost: { s: 2, e: 1 } };
+  const setupBuy = () => {
+    const s2 = fresh();
+    s2.board[1][0] = card;
+    Object.assign(s2.players[0].tokens, { s: 2, e: 1, g: 2 });
+    return s2;
+  };
+  st = setupBuy();
+  ok(tryAct(st, 0, { type: 'buy', from: 'board', tier: 1, index: 0, pay: { s: 1, e: 0, g: 2 } }) === null
+     && st.players[0].tokens.s === 1 && st.players[0].tokens.e === 1 && st.players[0].tokens.g === 0
+     && st.bank.g === 7, '可以主动用黄金代替彩色宝石');
+  st = setupBuy();
+  ok(tryAct(st, 0, { type: 'buy', from: 'board', tier: 1, index: 0 }) === null
+     && st.players[0].tokens.g === 2 && st.players[0].tokens.s === 0, '不传 pay 时默认优先用彩色宝石');
+  st = setupBuy();
+  ok(/不符/.test(tryAct(st, 0, { type: 'buy', from: 'board', tier: 1, index: 0, pay: { s: 2, e: 1, g: 1 } })),
+     '支付黄金数与费用不符被拒');
+  ok(/不合法/.test(tryAct(st, 0, { type: 'buy', from: 'board', tier: 1, index: 0, pay: { s: 3, g: 0 } })),
+     '超额支付被拒');
+  ok(/黄金不足/.test(tryAct(st, 0, { type: 'buy', from: 'board', tier: 1, index: 0, pay: { s: 0, e: 0, g: 3 } })),
+     '黄金替代数不能超过持有黄金');
+  ok(st.players[0].tokens.s === 2 && st.players[0].cards.length === 0, '被拒的购买不改变局面');
+
+  // 非整数位置给出正常错误,而不是服务器内部错误
+  st = setupBuy();
+  st.players[0].reserved.push({ ...card, id: 9002, fromDeck: false });
+  for (const a of [
+    { type: 'buy', from: 'reserve', index: 0.5 },
+    { type: 'buy', from: 'board', tier: 1, index: 0.5 },
+    { type: 'reserve', tier: 1, index: 1.5 },
+    { type: 'buy', from: 'reserve', index: '0' },
+  ]) {
+    const err = tryAct(st, 0, a);
+    ok(err && !err.startsWith('INTERNAL'), `非法位置 ${JSON.stringify(a.index)} 返回玩家可读错误`);
+  }
+
+  // 跳过回合: 只有无合法操作时允许;双方连续跳过则结算
+  st = fresh();
+  ok(/不能跳过/.test(tryAct(st, 0, { type: 'pass' })), '有合法操作时不能跳过');
+  const jam = () => {
+    const s2 = fresh();
+    Object.assign(s2.bank, { d: 0, s: 0, e: 0, r: 0, o: 0 });
+    const dear = { id: 0, tier: 3, bonus: 'd', points: 5, cost: { o: 7 } };
+    for (const [i, p] of s2.players.entries()) {
+      p.reserved = [1, 2, 3].map(k => ({ ...dear, id: 9100 + i * 10 + k, fromDeck: false }));
+    }
+    for (const t of [1, 2, 3]) s2.board[t] = s2.board[t].map((c, k) => ({ ...dear, id: 9200 + t * 10 + k }));
+    s2.players[0].points = 3; s2.players[1].points = 5;
+    return s2;
+  };
+  st = jam();
+  ok(!R.hasLegalAction(st, 0), '构造出无合法操作的局面');
+  ok(tryAct(st, 0, { type: 'pass' }) === null && st.current === 1 && !st.gameOver, '无合法操作时可以跳过');
+  ok(tryAct(st, 1, { type: 'pass' }) === null && st.gameOver && st.winner === 1, '双方连续跳过后按分数结算');
+  st = jam();
+  tryAct(st, 0, { type: 'pass' });
+  st.bank.d = 1; // 对手有了合法操作
+  tryAct(st, 1, { type: 'take', gems: { d: 1 } });
+  ok(st.passes === 0 && !st.gameOver, '中间有正常操作则连续跳过计数清零');
+}
+
 async function lifecycleTests() {
   const port = PORT + 1;
   const timeout = 400;
@@ -114,7 +214,7 @@ async function lifecycleTests() {
     const actingSeat = A.state.current;
     const actor = actingSeat === 0 ? A : B;
     const beforeCurrent = A.state.current;
-    actor.sendJ({ type: 'action', action: { type: 'take', gems: { d: 1 } } });
+    actor.sendJ({ type: 'action', action: { type: 'take', gems: { d: 1, s: 1, e: 1 } } });
     await waitFor(() => A.state.current !== beforeCurrent, '合法消息刷新并执行');
     await sleep(250);
     ok(!A.roomClosed && !B.roomClosed, '合法操作刷新空闲期限');
@@ -158,6 +258,7 @@ async function lifecycleTests() {
 }
 
 async function main() {
+  ruleTests();
   const server = spawn('node', ['server.js'], { env: { ...process.env, PORT: String(PORT) }, cwd: __dirname + '/..' });
   await new Promise(res => server.stdout.once('data', res));
 

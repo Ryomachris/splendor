@@ -43,7 +43,7 @@ const ALL_CARDS = [
   C(1,'e',0,{r:3}),             C(1,'e',1,{o:4}),
   // 红宝石 r
   C(1,'r',0,{d:1,s:1,e:1,o:1}), C(1,'r',0,{d:2,s:1,e:1,o:1}), C(1,'r',0,{d:2,e:1,o:2}),
-  C(1,'r',0,{d:1,r:1,o:3}),     C(1,'r',0,{s:2,e:1}),         C(1,'r',0,{d:2,o:2}),
+  C(1,'r',0,{d:1,r:1,o:3}),     C(1,'r',0,{s:2,e:1}),         C(1,'r',0,{d:2,r:2}),
   C(1,'r',0,{d:3}),             C(1,'r',1,{d:4}),
 
   // ---- 二级卡 (30 张) ----
@@ -112,12 +112,14 @@ function newGame(names) {
     })),
     starter, current: starter,
     pending: null,        // {type:'discard',player,count} | {type:'noble',player,options}
+    passes: 0,            // 连续跳过回合的次数
     gameOver: false, winner: null,
   };
 }
 
 const sum = obj => Object.values(obj).reduce((a, b) => a + (b || 0), 0);
 
+// 默认支付: 优先用彩色宝石,不足部分用黄金(前端 paymentOf 同算法)
 function computePayment(card, p) {
   let gold = 0; const pay = {};
   for (const c of COLORS) {
@@ -129,6 +131,33 @@ function computePayment(card, p) {
   if (gold > p.tokens.g) return null;
   pay.g = gold;
   return pay;
+}
+
+// 玩家自选支付: pay 为实际支付的宝石,允许主动用黄金代替彩色宝石
+function checkPayment(card, p, pay) {
+  assert(pay && typeof pay === 'object' && !Array.isArray(pay)
+    && Object.keys(pay).every(k => k === 'g' || COLORS.includes(k)), '支付方案不合法');
+  let gold = 0; const res = {};
+  for (const c of COLORS) {
+    const need = Math.max(0, (card.cost[c] || 0) - p.bonuses[c]);
+    const n = pay[c] === undefined ? 0 : pay[c];
+    assert(Number.isInteger(n) && n >= 0 && n <= need && n <= p.tokens[c], '支付方案不合法');
+    res[c] = n;
+    gold += need - n;
+  }
+  assert((pay.g === undefined ? 0 : pay.g) === gold, '支付方案与卡牌费用不符');
+  assert(gold <= p.tokens.g, '黄金不足,无法按此方案支付');
+  res.g = gold;
+  return res;
+}
+
+// 当前玩家是否还有任何合法操作(没有时才允许跳过回合)
+function hasLegalAction(st, seat) {
+  const p = st.players[seat];
+  if (COLORS.some(c => st.bank[c] > 0)) return true;
+  const visible = [1, 2, 3].flatMap(t => st.board[t]).filter(Boolean);
+  if (p.reserved.length < 3 && (visible.length || [1, 2, 3].some(t => st.decks[t].length))) return true;
+  return [...visible, ...p.reserved].some(card => computePayment(card, p));
 }
 
 function meetsNoble(p, noble) {
@@ -178,7 +207,11 @@ function applyAction(st, seat, a) {
       if (colors.length === 1 && gems[colors[0]] === 2) {
         assert(st.bank[colors[0]] >= 4, '该颜色宝石不足 4 枚,不能拿 2 枚');
       } else {
-        assert(colors.length <= 3 && colors.every(c => gems[c] === 1), '只能拿 3 枚不同色,或同色 2 枚');
+        // 拿不同色必须拿满 3 种;银行不足 3 种颜色时,有几种拿几种
+        const need = Math.min(3, COLORS.filter(c => st.bank[c] > 0).length);
+        assert(colors.every(c => gems[c] === 1), '只能拿 3 枚不同色,或同色 2 枚');
+        assert(colors.length === need,
+          need === 3 ? '必须拿 3 枚不同颜色的宝石' : `银行只剩 ${need} 种颜色,必须各拿 1 枚`);
       }
       for (const c of colors) assert(st.bank[c] >= gems[c], '银行宝石不足');
       for (const c of colors) { st.bank[c] -= gems[c]; p.tokens[c] += gems[c]; }
@@ -194,7 +227,7 @@ function applyAction(st, seat, a) {
         assert(card, '该级牌堆已空');
         fromDeck = true;
       } else {
-        assert(a.index >= 0 && a.index < 4, '位置不合法');
+        assert(Number.isInteger(a.index) && a.index >= 0 && a.index < 4, '位置不合法');
         card = st.board[tier][a.index];
         assert(card, '该位置没有卡牌');
         st.board[tier][a.index] = st.decks[tier].pop() || null;
@@ -206,14 +239,14 @@ function applyAction(st, seat, a) {
     case 'buy': {
       let card;
       if (a.from === 'reserve') {
-        assert(a.index >= 0 && a.index < p.reserved.length, '预定卡不存在');
+        assert(Number.isInteger(a.index) && a.index >= 0 && a.index < p.reserved.length, '预定卡不存在');
         card = p.reserved[a.index];
       } else {
-        assert([1, 2, 3].includes(a.tier) && a.index >= 0 && a.index < 4, '位置不合法');
+        assert([1, 2, 3].includes(a.tier) && Number.isInteger(a.index) && a.index >= 0 && a.index < 4, '位置不合法');
         card = st.board[a.tier][a.index];
         assert(card, '该位置没有卡牌');
       }
-      const pay = computePayment(card, p);
+      const pay = a.pay === undefined ? computePayment(card, p) : checkPayment(card, p, a.pay);
       assert(pay, '宝石不足,无法购买');
       for (const [c, n] of Object.entries(pay)) { p.tokens[c] -= n; st.bank[c] += n; }
       if (a.from === 'reserve') p.reserved.splice(a.index, 1);
@@ -224,9 +257,17 @@ function applyAction(st, seat, a) {
       p.points += card.points;
       break;
     }
+    case 'pass': {
+      assert(!hasLegalAction(st, seat), '还有可执行的操作,不能跳过回合');
+      // 双方连续跳过说明局面已冻结,直接按当前分数结算
+      if (++st.passes >= st.players.length) endGame(st);
+      else finishTurn(st);
+      return;
+    }
     default:
       throw new ActionError('未知操作');
   }
+  st.passes = 0;
 
   // 回合结算: 超过 10 枚需弃宝石 → 贵族拜访 → 换人
   if (sum(p.tokens) > 10) {
@@ -260,15 +301,18 @@ function finishTurn(st) {
   st.pending = null;
   const next = (st.current + 1) % st.players.length;
   // 有人达到 15 分后,本轮打完(回到先手玩家时)结束
-  if (next === st.starter && st.players.some(pl => pl.points >= 15)) {
-    st.gameOver = true;
-    const [a, b] = st.players;
-    if (a.points !== b.points) st.winner = a.points > b.points ? 0 : 1;
-    else if (a.cards.length !== b.cards.length) st.winner = a.cards.length < b.cards.length ? 0 : 1;
-    else st.winner = -1; // 平局
-    return;
-  }
+  if (next === st.starter && st.players.some(pl => pl.points >= 15)) return endGame(st);
   st.current = next;
+}
+
+// 结算: 高分者胜;同分时购卡少者胜;仍相同则平局
+function endGame(st) {
+  st.pending = null;
+  st.gameOver = true;
+  const [a, b] = st.players;
+  if (a.points !== b.points) st.winner = a.points > b.points ? 0 : 1;
+  else if (a.cards.length !== b.cards.length) st.winner = a.cards.length < b.cards.length ? 0 : 1;
+  else st.winner = -1; // 平局
 }
 
 /* ================= 房间管理 ================= */
@@ -294,6 +338,7 @@ function viewFor(room, seat) {
     current: st.current, starter: st.starter,
     pending: st.pending, gameOver: st.gameOver, winner: st.winner,
     you: seat,
+    canPass: seat === st.current && !st.pending && !st.gameOver && !hasLegalAction(st, seat),
     rematch: [...room.rematch],
     players: st.players.map((p, i) => ({
       name: p.name, tokens: p.tokens, bonuses: p.bonuses, points: p.points,
@@ -491,24 +536,29 @@ function handleMessage(ws, msg) {
   }
 }
 
-// 心跳保活(防止代理断开空闲连接)
-setInterval(() => {
-  wss.clients.forEach(ws => {
-    if (!ws.isAlive) return ws.terminate();
-    ws.isAlive = false;
-    ws.ping();
+// 直接运行时启动服务;被 require 时(规则单元测试)只导出规则引擎
+if (require.main === module) {
+  // 心跳保活(防止代理断开空闲连接)
+  setInterval(() => {
+    wss.clients.forEach(ws => {
+      if (!ws.isAlive) return ws.terminate();
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
+  // 等待房间按创建时间过期；已开局房间按最后应用消息时间过期。
+  setInterval(() => {
+    const now = Date.now();
+    for (const room of rooms.values()) {
+      const reason = roomExpiryReason(room, now);
+      if (reason) closeRoom(room, reason);
+    }
+  }, ROOM_SWEEP_INTERVAL_MS);
+
+  server.listen(PORT, () => {
+    console.log(`璀璨宝石服务器已启动: http://0.0.0.0:${PORT}`);
   });
-}, 30000);
-
-// 等待房间按创建时间过期；已开局房间按最后应用消息时间过期。
-setInterval(() => {
-  const now = Date.now();
-  for (const room of rooms.values()) {
-    const reason = roomExpiryReason(room, now);
-    if (reason) closeRoom(room, reason);
-  }
-}, ROOM_SWEEP_INTERVAL_MS);
-
-server.listen(PORT, () => {
-  console.log(`璀璨宝石服务器已启动: http://0.0.0.0:${PORT}`);
-});
+} else {
+  module.exports = { ALL_CARDS, ALL_NOBLES, COLORS, newGame, applyAction, hasLegalAction, ActionError };
+}
