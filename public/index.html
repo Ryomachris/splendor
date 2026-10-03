@@ -6,8 +6,9 @@
 <title>璀璨宝石 · 双人对决</title>
 <style>
   :root {
-    --bg: #1a1625; --panel: #262135; --panel2: #322b45; --line: #453c60;
-    --text: #ece7f5; --dim: #9a91b5; --accent: #e8b64c;
+    --bg: #0e1d16; --panel: #15291f; --panel2: #1d3a2b; --line: #2e5a43;
+    --text: #e4f3ea; --dim: #8db49e; --accent: #5fd38d; --accent-fg: #052615;
+    --affordable: #d6f56e;
     --c-d-bg: #eceff1; --c-d-fg: #37474f;
     --c-s-bg: #2f6fed; --c-s-fg: #fff;
     --c-e-bg: #1fa055; --c-e-fg: #fff;
@@ -17,13 +18,13 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background: var(--bg); color: var(--text);
+    background: var(--bg) radial-gradient(ellipse at top, #1c3f2d 0%, transparent 60%) no-repeat; color: var(--text);
     font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
     min-height: 100vh;
   }
   button {
     font-family: inherit; cursor: pointer; border: none; border-radius: 8px;
-    background: var(--accent); color: #2a1e05; font-weight: 700; padding: 9px 18px; font-size: 15px;
+    background: var(--accent); color: var(--accent-fg); font-weight: 700; padding: 9px 18px; font-size: 15px;
   }
   button:disabled { opacity: .35; cursor: not-allowed; }
   button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
@@ -52,7 +53,7 @@
   #roomTag { color: var(--dim); font-size: 13px; }
   #turnBanner { margin-left: auto; padding: 6px 16px; border-radius: 20px; font-weight: 700; font-size: 14px;
     background: var(--panel2); border: 1px solid var(--line); }
-  #turnBanner.mine { background: #2c4a1f; border-color: #62a943; color: #cdf3b3; }
+  #turnBanner.mine { background: #1f6640; border-color: var(--accent); color: #d8ffe7; }
   #gameLeaveBtn { padding: 6px 12px; font-size: 13px; }
 
   #layout { display: flex; gap: 14px; align-items: flex-start; }
@@ -125,8 +126,8 @@
   /* 贵族 */
   #nobles { display: flex; gap: 10px; margin-bottom: 12px; }
   .noble {
-    width: 86px; height: 86px; border-radius: 10px; background: linear-gradient(145deg,#4a3f66,#332b49);
-    border: 1px solid #6b5c96; padding: 6px; position: relative; flex-shrink: 0;
+    width: 86px; height: 86px; border-radius: 10px; background: linear-gradient(145deg,#2f6148,#1c3a2b);
+    border: 1px solid #4f8f6c; padding: 6px; position: relative; flex-shrink: 0;
   }
   .noble.selectable { cursor: pointer; box-shadow: 0 0 0 2px var(--accent); }
   .noble .pts { position: absolute; top: 4px; right: 8px; font-weight: 800; color: var(--accent); }
@@ -144,7 +145,7 @@
   .chip.disabled { opacity: .35; cursor: not-allowed; }
   .chip .cname { font-size: 10px; font-weight: 600; opacity: .85; }
   .chip .selbadge {
-    position: absolute; top: -6px; right: -6px; background: var(--accent); color: #2a1e05;
+    position: absolute; top: -6px; right: -6px; background: var(--accent); color: var(--accent-fg);
     width: 22px; height: 22px; border-radius: 50%; font-size: 13px; display: flex; align-items: center; justify-content: center;
   }
   #takeBar { display: none; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -157,7 +158,7 @@
     align-items: center; justify-content: center; gap: 4px; font-weight: 800; cursor: pointer;
     border: 2px dashed rgba(255,255,255,.3); flex-shrink: 0;
   }
-  .deckBack.t1 { background: #274b31; } .deckBack.t2 { background: #52432a; } .deckBack.t3 { background: #2a3a5c; }
+  .deckBack.t1 { background: #2d6a45; } .deckBack.t2 { background: #4f5d26; } .deckBack.t3 { background: #1d5257; }
   .deckBack .cnt { font-size: 13px; color: var(--dim); font-weight: 600; }
   .deckBack.empty { opacity: .3; cursor: default; }
   .cardSlots { display: flex; gap: 10px; flex: 1; }
@@ -176,7 +177,7 @@
     display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.4);
   }
   .bonusGem { width: 22px; height: 14px; border-radius: 4px; border: 1px solid rgba(255,255,255,.5); }
-  .card.affordable { box-shadow: 0 0 0 2px #7ddf64; }
+  .card.affordable { box-shadow: 0 0 0 2px var(--affordable), 0 0 10px rgba(214,245,110,.35); }
 
   /* 玩家面板 */
   .pPanel.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
@@ -200,14 +201,14 @@
   .rCard .costs { margin-top: auto; display: flex; flex-wrap: wrap; gap: 2px; }
   .rCard .costDot { width: 15px; height: 15px; font-size: 10px; }
   .rCard .bonusGem { position: absolute; top: 2px; right: 2px; width: 18px; height: 11px; }
-  .rCard.hiddenCard { background: repeating-linear-gradient(45deg,#3a3352,#3a3352 6px,#332b49 6px,#332b49 12px);
+  .rCard.hiddenCard { background: repeating-linear-gradient(45deg,#26473a,#26473a 6px,#1c3a2b 6px,#1c3a2b 12px);
     align-items: center; justify-content: center; cursor: default; color: var(--dim); }
-  .nobleMini { width: 30px; height: 30px; border-radius: 6px; background: #4a3f66; display: inline-flex;
-    align-items: center; justify-content: center; font-size: 14px; border: 1px solid #6b5c96; }
+  .nobleMini { width: 30px; height: 30px; border-radius: 6px; background: #2f6148; display: inline-flex;
+    align-items: center; justify-content: center; font-size: 14px; border: 1px solid #4f8f6c; }
 
   /* 弹窗 */
   .overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65);
+    display: none; position: fixed; inset: 0; background: rgba(3,14,9,.72);
     align-items: center; justify-content: center; z-index: 50; padding: 20px;
   }
   .overlay.show { display: flex; }
